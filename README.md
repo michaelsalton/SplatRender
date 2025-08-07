@@ -2,6 +2,8 @@
 
 A high-performance 3D Gaussian Splatting renderer implemented from scratch in C++/CUDA. This project uses modern neural rendering techniques and implements the complete rasterization pipeline without dependencies on existing implementations.
 
+![3dgs](https://github.com/user-attachments/assets/b241f580-71c4-403d-ab13-9485025fbf5c)
+
 ## Project Goals
 
 - **Educational**: Understand 3D Gaussian Splatting at the implementation level
