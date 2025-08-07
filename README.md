@@ -24,19 +24,19 @@ A high-performance 3D Gaussian Splatting renderer implemented from scratch in C+
 
 This renderer implements 3D Gaussian Splatting from the mathematical foundations:
 
-**3D to 2D Projection**: Transform oriented 3D Gaussians to screen space
-**Covariance Computation**: Project 3D covariance matrices using view transformation Jacobian
-**Tile-based Rasterization**: Divide screen into 16×16 tiles for parallel processing
-**Depth Sorting**: Order Gaussians front-to-back within each tile
-**Alpha Blending**: Accumulate colors using differentiable alpha composition
-**Spherical Harmonics**: Evaluate view-dependent appearance up to degree 3
+1. **3D to 2D Projection**: Transform oriented 3D Gaussians to screen space
+2. **Covariance Computation**: Project 3D covariance matrices using view transformation Jacobian
+3. **Tile-based Rasterization**: Divide screen into 16×16 tiles for parallel processing
+4. **Depth Sorting**: Order Gaussians front-to-back within each tile
+5. **Alpha Blending**: Accumulate colors using differentiable alpha composition
+6. **Spherical Harmonics**: Evaluate view-dependent appearance up to degree 3
 
 ### CUDA Optimization Strategies
 
-**Memory Coalescing**: Optimize global memory access patterns
-**Shared Memory**: Cache frequently accessed data within thread blocks
-**Occupancy Optimization**: Balance threads per block vs register usage
-**Warp-level Primitives**: Use cooperative thread operations
+- **Memory Coalescing**: Optimize global memory access patterns
+- **Shared Memory**: Cache frequently accessed data within thread blocks
+- **Occupancy Optimization**: Balance threads per block vs register usage
+- **Warp-level Primitives**: Use cooperative thread operations
 
 ## Requirements
 
