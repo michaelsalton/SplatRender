@@ -39,3 +39,37 @@
 
 # debug information files
 *.dwo
+
+# Build directories
+build/
+debug/
+release/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Compiled binaries
+*.o
+*.a
+*.so
+*.exe
+
+# CUDA compilation
+*.ptx
+*.cubin
+
+# Data files
+data/*.ply
+data/*.splat
+
+# Profiling output
+*.nsys-rep
+*.ncu-rep
+profile_*
+
+# Temporary files
+*.tmp
+*.log
