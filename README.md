@@ -38,6 +38,17 @@ This renderer implements 3D Gaussian Splatting from the mathematical foundations
 - **Occupancy Optimization**: Balance threads per block vs register usage
 - **Warp-level Primitives**: Use cooperative thread operations
 
+## Mathematical Foundations
+
+### 3D Gaussian covariance matrix
+Σ = R · S · S^T · R^T
+
+### 2D projection via Jacobian  
+Σ_2D = J · Σ_3D · J^T
+
+### Alpha blending equation
+C = Σ(α_i · c_i · ∏(1 - α_j)) for j < i
+
 ## Requirements
 
 ### Hardware
@@ -50,3 +61,19 @@ This renderer implements 3D Gaussian Splatting from the mathematical foundations
 - CUDA Toolkit 11.8+
 - GCC 9+ or Clang 10+
 - CMake 3.18+
+
+## References
+
+- 3D Gaussian Splatting for Real-Time Radiance Field Rendering (Kerbl et al., SIGGRAPH 2023)
+- CUDA Programming Guide (NVIDIA)
+- Real-Time Rendering (Akenine-Möller et al.)
+
+## Acknowledgments
+
+- Original 3DGS research team at Inria for the foundational paper
+- NVIDIA for CUDA toolkit and excellent documentation
+- Graphics programming community for invaluable resources
+
+**Note**: This is an independent implementation created for educational purposes. It is not affiliated with or endorsed by the original 3D Gaussian Splatting research team.
+
+Built with ❤️ for learning and advancing real-time neural rendering
