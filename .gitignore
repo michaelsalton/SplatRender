@@ -1,3 +1,23 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+bin/
+lib/
+debug/
+release/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+*.cmake
+!CMakeLists.txt
+
 # Prerequisites
 *.d
 
@@ -6,70 +26,238 @@
 *.lo
 *.o
 *.obj
+*.ko
+*.elf
 
 # Precompiled Headers
 *.gch
 *.pch
 
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
 # Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
+*.so.*
+*.dylib.*
 
 # Compiled Static libraries
 *.lai
 *.la
 *.a
 *.lib
+*.ar
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
+*.dwo
 
 # Executables
 *.exe
 *.out
 *.app
+SplatRender
+!src/SplatRender/
 
-# debug information files
-*.dwo
-
-# Build directories
-build/
-debug/
-release/
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Compiled binaries
-*.o
-*.a
-*.so
-*.exe
-
-# CUDA compilation
+# CUDA specific
+*.i
+*.ii
+*.gpu
 *.ptx
 *.cubin
+*.fatbin
+*.cudafe*
+*.module_id
+*.mod
+*.smod
+
+# IDE specific files
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/c_cpp_properties.json
+*.code-workspace
+.history/
+
+# CLion
+.idea/
+*.iml
+
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.xcuserstate
+project.xcworkspace/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vcxproj.filters
+*.vcxproj.user
+
+# Operating System Files
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Vim swap files
+*.swp
+*.swo
+*.swn
+.*.swp
+.*.swo
+.*.swn
 
 # Data files
-data/*.ply
-data/*.splat
+*.ply
+*.pcd
+*.obj
+*.stl
+*.splat
+!data/sample.ply
+data/output/
+data/temp/
+data/cache/
 
-# Profiling output
+# Log files
+*.log
+*.txt
+!requirements.txt
+!CMakeLists.txt
+!requirements.md
+logs/
+
+# Profiling data
+*.nvprof
 *.nsys-rep
 *.ncu-rep
+*.qdrep
+*.qdrep*
+*.sqlite
+gmon.out
+callgrind.out*
+perf.data
+perf.data.old
 profile_*
+
+# Documentation build
+docs/_build/
+docs/_static/
+docs/_templates/
+*.dox
+doxygen/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*~
+
+# Core dumps
+core
+core.*
+vgcore.*
+
+# Test results
+test_results/
+*.test
+Testing/
+
+# Package files
+*.tar
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# NVIDIA Nsight
+.nsight*
+*.nvact
+*.nvproj
 
 # Temporary files
 *.tmp
-*.log
+*.temp
+.cache/
+
+# Project specific
+output/
+results/
+checkpoints/
+models/
+!src/models/
+
+# Python (for any helper scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+venv/
+env/
+ENV/
+
+# Keep important directories
+!.gitkeep
+
+# Symlinks (keep compile_commands.json symlink)
+!compile_commands.json
