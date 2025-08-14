@@ -68,7 +68,7 @@ set(MATH_SOURCES
 )
 
 set(IO_SOURCES
-    # src/io/ply_loader.cpp
+    src/io/ply_loader.cpp
 )
 
 set(RENDERER_SOURCES
