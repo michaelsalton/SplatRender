@@ -72,7 +72,7 @@ set(IO_SOURCES
 )
 
 set(RENDERER_SOURCES
-    # src/renderer/cpu_rasterizer.cpp
+    src/renderer/cpu_rasterizer.cpp
     src/renderer/opengl_display.cpp
 )
 
