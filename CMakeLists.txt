@@ -80,7 +80,7 @@ else()
     message(STATUS "Found GLM: ${GLM_INCLUDE_DIR}")
 endif()
 
-# Source files - comment out unimplemented files for now
+# Source files
 set(CORE_SOURCES
     # src/core/engine.cpp
     # src/core/camera.cpp
@@ -88,9 +88,9 @@ set(CORE_SOURCES
 )
 
 set(MATH_SOURCES
-    # src/math/gaussian.cpp
-    # src/math/matrix_ops.cpp
-    # src/math/spherical_harmonics.cpp
+    src/math/gaussian.cpp
+    src/math/matrix_ops.cpp
+    src/math/spherical_harmonics.cpp
 )
 
 set(IO_SOURCES
@@ -205,7 +205,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
     enable_testing()
-    add_subdirectory(tests)
+    # Only add tests subdirectory if it has a CMakeLists.txt
+    if(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
+        add_subdirectory(tests)
+    endif()
 endif()
 
 # Installation

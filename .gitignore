@@ -262,4 +262,4 @@ ENV/
 !.gitkeep
 
 # Symlinks (keep compile_commands.json symlink)
-!compile_commands.json
+compile_commands.json
