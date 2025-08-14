@@ -296,19 +296,19 @@ void test_window_event_handling() {
     glfwSetWindowUserPointer(test_window, &event_data);
     
     // Set callbacks
-    glfwSetKeyCallback(test_window, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+    glfwSetKeyCallback(test_window, [](GLFWwindow* window, int /*key*/, int /*scancode*/, int action, int /*mods*/) {
         EventData* data = static_cast<EventData*>(glfwGetWindowUserPointer(window));
         if (action == GLFW_PRESS) {
             *data->key_pressed = true;
         }
     });
     
-    glfwSetCursorPosCallback(test_window, [](GLFWwindow* window, double xpos, double ypos) {
+    glfwSetCursorPosCallback(test_window, [](GLFWwindow* window, double /*xpos*/, double /*ypos*/) {
         EventData* data = static_cast<EventData*>(glfwGetWindowUserPointer(window));
         *data->mouse_moved = true;
     });
     
-    glfwSetFramebufferSizeCallback(test_window, [](GLFWwindow* window, int width, int height) {
+    glfwSetFramebufferSizeCallback(test_window, [](GLFWwindow* window, int /*width*/, int /*height*/) {
         EventData* data = static_cast<EventData*>(glfwGetWindowUserPointer(window));
         *data->window_resized = true;
     });
@@ -317,10 +317,8 @@ void test_window_event_handling() {
     glfwPollEvents();
     
     // In a real test environment, we would simulate events
-    // For now, just verify the callbacks are set
-    ASSERT_TRUE(glfwSetKeyCallback != nullptr);
-    ASSERT_TRUE(glfwSetCursorPosCallback != nullptr);
-    ASSERT_TRUE(glfwSetFramebufferSizeCallback != nullptr);
+    // For now, just verify the window was created
+    ASSERT_TRUE(test_window != nullptr);
     
     glfwDestroyWindow(test_window);
 }

@@ -1,6 +1,7 @@
 #include "core/input.h"
 #include "core/camera.h"
 #include <GLFW/glfw3.h>
+#include <iostream>
 
 namespace SplatRender {
 
@@ -85,6 +86,25 @@ void InputHandler::onKeyCallback(int key, int scancode, int action, int mods) {
         // Toggle mouse capture with TAB
         if (key == GLFW_KEY_TAB) {
             setMouseCapture(!mouse_captured_);
+        }
+        
+        // Save camera state with F5
+        if (key == GLFW_KEY_F5 && camera_) {
+            camera_->saveState("camera_state.txt");
+        }
+        
+        // Load camera state with F6
+        if (key == GLFW_KEY_F6 && camera_) {
+            camera_->loadState("camera_state.txt");
+        }
+        
+        // Print camera info with F1
+        if (key == GLFW_KEY_F1 && camera_) {
+            glm::vec3 pos = camera_->getPosition();
+            std::cout << "Camera Info:" << std::endl;
+            std::cout << "  Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
+            std::cout << "  Yaw: " << camera_->getYaw() << "°, Pitch: " << camera_->getPitch() << "°" << std::endl;
+            std::cout << "  FOV: " << camera_->getFOV() << "°" << std::endl;
         }
     } else if (action == GLFW_RELEASE) {
         key_states_[key] = false;

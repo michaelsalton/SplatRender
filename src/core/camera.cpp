@@ -1,6 +1,9 @@
 #include "core/camera.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 namespace SplatRender {
 
@@ -100,6 +103,67 @@ void Camera::updateCameraVectors() {
     // Recalculate right and up vectors
     right_ = glm::normalize(glm::cross(front_, world_up_));
     up_ = glm::normalize(glm::cross(right_, front_));
+}
+
+void Camera::saveState(const std::string& filename) const {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file for saving camera state: " << filename << std::endl;
+        return;
+    }
+    
+    file << "# SplatRender Camera State\n";
+    file << "position " << position_.x << " " << position_.y << " " << position_.z << "\n";
+    file << "yaw " << yaw_ << "\n";
+    file << "pitch " << pitch_ << "\n";
+    file << "fov " << fov_ << "\n";
+    file << "movement_speed " << movement_speed_ << "\n";
+    file << "mouse_sensitivity " << mouse_sensitivity_ << "\n";
+    file << "near_plane " << near_plane_ << "\n";
+    file << "far_plane " << far_plane_ << "\n";
+    
+    file.close();
+    std::cout << "Camera state saved to: " << filename << std::endl;
+}
+
+bool Camera::loadState(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file for loading camera state: " << filename << std::endl;
+        return false;
+    }
+    
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        
+        std::istringstream iss(line);
+        std::string key;
+        iss >> key;
+        
+        if (key == "position") {
+            iss >> position_.x >> position_.y >> position_.z;
+        } else if (key == "yaw") {
+            iss >> yaw_;
+        } else if (key == "pitch") {
+            iss >> pitch_;
+        } else if (key == "fov") {
+            iss >> fov_;
+        } else if (key == "movement_speed") {
+            iss >> movement_speed_;
+        } else if (key == "mouse_sensitivity") {
+            iss >> mouse_sensitivity_;
+        } else if (key == "near_plane") {
+            iss >> near_plane_;
+        } else if (key == "far_plane") {
+            iss >> far_plane_;
+        }
+    }
+    
+    file.close();
+    updateCameraVectors();
+    std::cout << "Camera state loaded from: " << filename << std::endl;
+    return true;
 }
 
 } // namespace SplatRender

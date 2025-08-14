@@ -68,6 +68,14 @@ public:
     void clear() {
         results_.clear();
     }
+    
+    int getFailureCount() const {
+        int failed = 0;
+        for (const auto& result : results_) {
+            if (!result.passed) failed++;
+        }
+        return failed;
+    }
 
 private:
     std::vector<TestResult> results_;

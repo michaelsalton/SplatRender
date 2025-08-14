@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "core/camera.h"
+#include <cstdio>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/epsilon.hpp>
 
@@ -247,6 +248,51 @@ void test_camera_settings() {
     ASSERT_NEAR(camera.getFarPlane(), 500.0f, 1e-6f);
 }
 
+void test_camera_save_load_state() {
+    Camera camera;
+    
+    // Set specific camera state
+    camera.setPosition(glm::vec3(10.0f, 20.0f, 30.0f));
+    camera.processMouseMovement(45.0f, -30.0f); // Change yaw and pitch
+    camera.setFOV(90.0f);
+    camera.setMovementSpeed(15.0f);
+    camera.setMouseSensitivity(0.3f);
+    camera.setClipPlanes(0.5f, 2000.0f);
+    
+    // Save state
+    const std::string test_file = "test_camera_state.txt";
+    camera.saveState(test_file);
+    
+    // Create new camera with default values
+    Camera loaded_camera;
+    
+    // Load state
+    bool result = loaded_camera.loadState(test_file);
+    ASSERT_TRUE(result);
+    
+    // Verify loaded state matches saved state
+    ASSERT_VEC_NEAR(loaded_camera.getPosition(), glm::vec3(10.0f, 20.0f, 30.0f), 1e-6f);
+    ASSERT_NEAR(loaded_camera.getFOV(), 90.0f, 1e-6f);
+    // Note: Can't directly verify movement_speed_ and mouse_sensitivity_ as they're private
+    // But we can verify the values were loaded by checking camera behavior
+    ASSERT_NEAR(loaded_camera.getNearPlane(), 0.5f, 1e-6f);
+    ASSERT_NEAR(loaded_camera.getFarPlane(), 2000.0f, 1e-6f);
+    
+    // Clean up test file
+    std::remove(test_file.c_str());
+}
+
+void test_camera_load_nonexistent_file() {
+    Camera camera;
+    
+    // Try to load non-existent file
+    bool result = camera.loadState("nonexistent_file.txt");
+    ASSERT_FALSE(result);
+    
+    // Camera should remain unchanged
+    ASSERT_VEC_NEAR(camera.getPosition(), glm::vec3(0.0f, 0.0f, 3.0f), 1e-6f);
+}
+
 int main() {
     std::cout << "Running Camera Tests..." << std::endl;
     
@@ -261,6 +307,8 @@ int main() {
     RUN_TEST(test_camera_front_vector);
     RUN_TEST(test_camera_vectors_orthogonal);
     RUN_TEST(test_camera_settings);
+    RUN_TEST(test_camera_save_load_state);
+    RUN_TEST(test_camera_load_nonexistent_file);
     
     TestFramework::getInstance().printSummary();
     

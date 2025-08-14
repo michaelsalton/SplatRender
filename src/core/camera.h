@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <string>
 
 namespace SplatRender {
 
@@ -50,6 +51,10 @@ public:
     void setClipPlanes(float near_plane, float far_plane);
     void setMovementSpeed(float speed) { movement_speed_ = speed; }
     void setMouseSensitivity(float sensitivity) { mouse_sensitivity_ = sensitivity; }
+    
+    // Save/Load camera state
+    void saveState(const std::string& filename) const;
+    bool loadState(const std::string& filename);
 
 private:
     void updateCameraVectors();

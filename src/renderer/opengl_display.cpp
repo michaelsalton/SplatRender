@@ -88,6 +88,9 @@ bool OpenGLDisplay::initialize(int width, int height) {
     
     glBindTexture(GL_TEXTURE_2D, 0);
     
+    // Set initial viewport
+    glViewport(0, 0, width_, height_);
+    
     checkGLError("initialize");
     
     is_initialized_ = true;

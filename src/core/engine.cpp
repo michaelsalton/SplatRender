@@ -101,6 +101,19 @@ bool Engine::initialize(int width, int height, const std::string& title) {
     std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
     std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
     
+    // Print controls
+    std::cout << "\n=== Controls ===" << std::endl;
+    std::cout << "WASD        - Move camera" << std::endl;
+    std::cout << "Mouse       - Look around" << std::endl;
+    std::cout << "Scroll      - Adjust FOV" << std::endl;
+    std::cout << "Space/Shift - Move up/down" << std::endl;
+    std::cout << "TAB         - Toggle mouse capture" << std::endl;
+    std::cout << "F1          - Print camera info" << std::endl;
+    std::cout << "F5          - Save camera state" << std::endl;
+    std::cout << "F6          - Load camera state" << std::endl;
+    std::cout << "ESC         - Exit" << std::endl;
+    std::cout << "===============\n" << std::endl;
+    
     return true;
 }
 
