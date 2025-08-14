@@ -248,38 +248,38 @@ Gaussian3D PLYLoader::parseVertex(const std::vector<float>& vertex_data, const P
     Gaussian3D gaussian;
     
     // Extract position
-    if (header.position_x_idx >= 0 && header.position_x_idx < vertex_data.size()) {
+    if (header.position_x_idx >= 0 && static_cast<size_t>(header.position_x_idx) < vertex_data.size()) {
         gaussian.position.x = vertex_data[header.position_x_idx];
     }
-    if (header.position_y_idx >= 0 && header.position_y_idx < vertex_data.size()) {
+    if (header.position_y_idx >= 0 && static_cast<size_t>(header.position_y_idx) < vertex_data.size()) {
         gaussian.position.y = vertex_data[header.position_y_idx];
     }
-    if (header.position_z_idx >= 0 && header.position_z_idx < vertex_data.size()) {
+    if (header.position_z_idx >= 0 && static_cast<size_t>(header.position_z_idx) < vertex_data.size()) {
         gaussian.position.z = vertex_data[header.position_z_idx];
     }
     
     // Extract scale
-    if (header.scale_0_idx >= 0 && header.scale_0_idx < vertex_data.size()) {
+    if (header.scale_0_idx >= 0 && static_cast<size_t>(header.scale_0_idx) < vertex_data.size()) {
         gaussian.scale.x = std::exp(vertex_data[header.scale_0_idx]); // Scale is stored as log
     }
-    if (header.scale_1_idx >= 0 && header.scale_1_idx < vertex_data.size()) {
+    if (header.scale_1_idx >= 0 && static_cast<size_t>(header.scale_1_idx) < vertex_data.size()) {
         gaussian.scale.y = std::exp(vertex_data[header.scale_1_idx]);
     }
-    if (header.scale_2_idx >= 0 && header.scale_2_idx < vertex_data.size()) {
+    if (header.scale_2_idx >= 0 && static_cast<size_t>(header.scale_2_idx) < vertex_data.size()) {
         gaussian.scale.z = std::exp(vertex_data[header.scale_2_idx]);
     }
     
     // Extract rotation (quaternion)
-    if (header.rot_0_idx >= 0 && header.rot_0_idx < vertex_data.size()) {
+    if (header.rot_0_idx >= 0 && static_cast<size_t>(header.rot_0_idx) < vertex_data.size()) {
         gaussian.rotation.w = vertex_data[header.rot_0_idx];
     }
-    if (header.rot_1_idx >= 0 && header.rot_1_idx < vertex_data.size()) {
+    if (header.rot_1_idx >= 0 && static_cast<size_t>(header.rot_1_idx) < vertex_data.size()) {
         gaussian.rotation.x = vertex_data[header.rot_1_idx];
     }
-    if (header.rot_2_idx >= 0 && header.rot_2_idx < vertex_data.size()) {
+    if (header.rot_2_idx >= 0 && static_cast<size_t>(header.rot_2_idx) < vertex_data.size()) {
         gaussian.rotation.y = vertex_data[header.rot_2_idx];
     }
-    if (header.rot_3_idx >= 0 && header.rot_3_idx < vertex_data.size()) {
+    if (header.rot_3_idx >= 0 && static_cast<size_t>(header.rot_3_idx) < vertex_data.size()) {
         gaussian.rotation.z = vertex_data[header.rot_3_idx];
     }
     
@@ -292,27 +292,31 @@ Gaussian3D PLYLoader::parseVertex(const std::vector<float>& vertex_data, const P
     }
     
     // Extract SH DC coefficients (0th degree)
-    if (header.f_dc_0_idx >= 0 && header.f_dc_0_idx < vertex_data.size()) {
+    if (header.f_dc_0_idx >= 0 && static_cast<size_t>(header.f_dc_0_idx) < vertex_data.size()) {
         gaussian.sh_coeffs[0] = vertex_data[header.f_dc_0_idx];
     }
-    if (header.f_dc_1_idx >= 0 && header.f_dc_1_idx < vertex_data.size()) {
+    if (header.f_dc_1_idx >= 0 && static_cast<size_t>(header.f_dc_1_idx) < vertex_data.size()) {
         gaussian.sh_coeffs[1] = vertex_data[header.f_dc_1_idx];
     }
-    if (header.f_dc_2_idx >= 0 && header.f_dc_2_idx < vertex_data.size()) {
+    if (header.f_dc_2_idx >= 0 && static_cast<size_t>(header.f_dc_2_idx) < vertex_data.size()) {
         gaussian.sh_coeffs[2] = vertex_data[header.f_dc_2_idx];
     }
     
     // Extract remaining SH coefficients
     for (size_t i = 0; i < header.f_rest_indices.size(); ++i) {
         int idx = header.f_rest_indices[i];
-        if (idx >= 0 && idx < vertex_data.size()) {
+        if (idx >= 0 && static_cast<size_t>(idx) < vertex_data.size()) {
             // f_rest starts at SH index 3 (after DC terms)
-            gaussian.sh_coeffs[i + 3] = vertex_data[idx];
+            // Make sure we don't exceed the sh_coeffs array bounds
+            size_t sh_idx = i + 3;
+            if (sh_idx < gaussian.sh_coeffs.size()) {
+                gaussian.sh_coeffs[sh_idx] = vertex_data[idx];
+            }
         }
     }
     
     // Extract opacity and apply sigmoid
-    if (header.opacity_idx >= 0 && header.opacity_idx < vertex_data.size()) {
+    if (header.opacity_idx >= 0 && static_cast<size_t>(header.opacity_idx) < vertex_data.size()) {
         float opacity_logit = vertex_data[header.opacity_idx];
         gaussian.opacity = 1.0f / (1.0f + std::exp(-opacity_logit)); // Sigmoid
     } else {

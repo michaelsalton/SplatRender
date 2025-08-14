@@ -121,6 +121,7 @@ target_link_libraries(test_ply_loader PRIVATE
     ${CMAKE_BINARY_DIR}/CMakeFiles/SplatRender.dir/src/io/ply_loader.cpp.o
     ${CMAKE_BINARY_DIR}/CMakeFiles/SplatRender.dir/src/math/gaussian.cpp.o
     ${CMAKE_BINARY_DIR}/CMakeFiles/SplatRender.dir/src/math/spherical_harmonics.cpp.o
+    ${CMAKE_BINARY_DIR}/CMakeFiles/SplatRender.dir/src/math/matrix_ops.cpp.o
 )
 
 # Add tests
