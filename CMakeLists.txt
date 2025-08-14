@@ -35,33 +35,7 @@ find_package(glfw3 3.3 REQUIRED)
 find_package(Threads REQUIRED)
 
 # Find GLEW
-find_package(GLEW QUIET)
-if(NOT GLEW_FOUND)
-    # Try manual search for GLEW on macOS
-    if(APPLE)
-        find_path(GLEW_INCLUDE_DIR GL/glew.h 
-            PATHS 
-            /opt/homebrew/include 
-            /usr/local/include
-            NO_DEFAULT_PATH
-        )
-        find_library(GLEW_LIBRARY 
-            NAMES GLEW glew libGLEW
-            PATHS 
-            /opt/homebrew/lib 
-            /usr/local/lib
-            NO_DEFAULT_PATH
-        )
-        if(GLEW_INCLUDE_DIR AND GLEW_LIBRARY)
-            set(GLEW_FOUND TRUE)
-            set(GLEW_INCLUDE_DIRS ${GLEW_INCLUDE_DIR})
-            set(GLEW_LIBRARIES ${GLEW_LIBRARY})
-            message(STATUS "Found GLEW: ${GLEW_LIBRARY}")
-        else()
-            message(FATAL_ERROR "GLEW not found!")
-        endif()
-    endif()
-endif()
+find_package(GLEW REQUIRED)
 
 # Find Eigen3
 find_package(Eigen3 3.4 REQUIRED)
@@ -82,9 +56,9 @@ endif()
 
 # Source files
 set(CORE_SOURCES
-    # src/core/engine.cpp
-    # src/core/camera.cpp
-    # src/core/input.cpp
+    src/core/engine.cpp
+    src/core/camera.cpp
+    src/core/input.cpp
 )
 
 set(MATH_SOURCES
@@ -99,7 +73,7 @@ set(IO_SOURCES
 
 set(RENDERER_SOURCES
     # src/renderer/cpu_rasterizer.cpp
-    # src/renderer/opengl_display.cpp
+    src/renderer/opengl_display.cpp
 )
 
 set(ALL_SOURCES
@@ -149,7 +123,6 @@ endif()
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${OPENGL_INCLUDE_DIRS}
-    ${GLEW_INCLUDE_DIRS}
 )
 
 # Eigen include
@@ -162,7 +135,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${GLM_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ${OPENGL_LIBRARIES}
     glfw
-    ${GLEW_LIBRARY}
+    GLEW::GLEW
     Threads::Threads
 )
 

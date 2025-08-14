@@ -51,6 +51,9 @@ private:
     static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos);
     static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
+    
+    // Static instance pointer for callbacks
+    static InputHandler* instance_;
 };
 
 } // namespace SplatRender

@@ -1,0 +1,217 @@
+#include "core/engine.h"
+#include "core/camera.h"
+#include "core/input.h"
+#include "renderer/opengl_display.h"
+#include <GLFW/glfw3.h>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
+namespace SplatRender {
+
+// Error callback for GLFW
+static void error_callback(int error, const char* description) {
+    std::cerr << "GLFW Error " << error << ": " << description << std::endl;
+}
+
+
+Engine::Engine()
+    : window_width_(1280)
+    , window_height_(720)
+    , window_title_("SplatRender")
+    , window_(nullptr)
+    , last_frame_time_(std::chrono::steady_clock::now())
+    , fps_(0.0f)
+    , frame_count_(0)
+    , fps_update_timer_(0.0f)
+    , is_initialized_(false)
+    , should_close_(false) {
+}
+
+Engine::~Engine() {
+    shutdown();
+}
+
+bool Engine::initialize(int width, int height, const std::string& title) {
+    if (is_initialized_) {
+        return true;
+    }
+    
+    window_width_ = width;
+    window_height_ = height;
+    window_title_ = title;
+    
+    // Set error callback
+    glfwSetErrorCallback(error_callback);
+    
+    // Initialize GLFW
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW" << std::endl;
+        return false;
+    }
+    
+    // Configure GLFW
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+    
+    // Create window
+    window_ = glfwCreateWindow(window_width_, window_height_, window_title_.c_str(), nullptr, nullptr);
+    if (!window_) {
+        std::cerr << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return false;
+    }
+    
+    // Make OpenGL context current
+    glfwMakeContextCurrent(window_);
+    
+    // Enable V-Sync
+    glfwSwapInterval(1);
+    
+    
+    // Initialize OpenGL display
+    display_ = std::make_unique<OpenGLDisplay>();
+    if (!display_->initialize(window_width_, window_height_)) {
+        std::cerr << "Failed to initialize OpenGL display" << std::endl;
+        return false;
+    }
+    
+    // Initialize camera
+    camera_ = std::make_unique<Camera>();
+    camera_->setPosition(glm::vec3(0.0f, 0.0f, 5.0f));
+    
+    // Store pointer to engine for callbacks
+    glfwSetWindowUserPointer(window_, this);
+    
+    // Initialize input handler
+    input_handler_ = std::make_unique<InputHandler>(window_, camera_.get());
+    
+    // Set OpenGL state
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    is_initialized_ = true;
+    std::cout << "Engine initialized successfully" << std::endl;
+    std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+    std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+    
+    return true;
+}
+
+void Engine::run() {
+    if (!is_initialized_) {
+        std::cerr << "Engine not initialized" << std::endl;
+        return;
+    }
+    
+    std::cout << "Starting render loop..." << std::endl;
+    
+    while (!glfwWindowShouldClose(window_) && !should_close_) {
+        // Calculate delta time
+        auto current_time = std::chrono::steady_clock::now();
+        float delta_time = std::chrono::duration<float>(current_time - last_frame_time_).count();
+        last_frame_time_ = current_time;
+        
+        // Poll events
+        glfwPollEvents();
+        
+        // Update
+        update(delta_time);
+        
+        // Render
+        render();
+        
+        // Swap buffers
+        glfwSwapBuffers(window_);
+        
+        // Update FPS counter
+        frame_count_++;
+        fps_update_timer_ += delta_time;
+        if (fps_update_timer_ >= 1.0f) {
+            fps_ = frame_count_ / fps_update_timer_;
+            frame_count_ = 0;
+            fps_update_timer_ = 0.0f;
+            
+            // Update window title with FPS
+            std::stringstream ss;
+            ss << window_title_ << " - FPS: " << std::fixed << std::setprecision(1) << fps_;
+            glfwSetWindowTitle(window_, ss.str().c_str());
+        }
+    }
+}
+
+void Engine::shutdown() {
+    if (!is_initialized_) {
+        return;
+    }
+    
+    // Shutdown components
+    input_handler_.reset();
+    camera_.reset();
+    display_.reset();
+    
+    // Destroy window
+    if (window_) {
+        glfwDestroyWindow(window_);
+        window_ = nullptr;
+    }
+    
+    // Terminate GLFW
+    glfwTerminate();
+    
+    is_initialized_ = false;
+    std::cout << "Engine shutdown complete" << std::endl;
+}
+
+void Engine::update(float delta_time) {
+    // Update input
+    input_handler_->processInput(delta_time);
+    
+    // Check for escape key
+    if (input_handler_->isKeyPressed(GLFW_KEY_ESCAPE)) {
+        should_close_ = true;
+    }
+    
+    // Check for window resize
+    int width, height;
+    glfwGetFramebufferSize(window_, &width, &height);
+    if (width != window_width_ || height != window_height_) {
+        window_width_ = width;
+        window_height_ = height;
+        display_->resize(width, height);
+    }
+}
+
+void Engine::render() {
+    // For now, just clear the screen with a dark blue color
+    display_->clear(0.1f, 0.1f, 0.2f, 1.0f);
+    
+    // TODO: In future phases, we'll render the Gaussian splats here
+    // For now, we can create a test pattern
+    static std::vector<float> test_buffer;
+    if (test_buffer.size() != window_width_ * window_height_ * 4) {
+        test_buffer.resize(window_width_ * window_height_ * 4);
+        
+        // Create a gradient test pattern
+        for (int y = 0; y < window_height_; ++y) {
+            for (int x = 0; x < window_width_; ++x) {
+                int idx = (y * window_width_ + x) * 4;
+                test_buffer[idx + 0] = static_cast<float>(x) / window_width_;     // R
+                test_buffer[idx + 1] = static_cast<float>(y) / window_height_;    // G
+                test_buffer[idx + 2] = 0.5f;                                      // B
+                test_buffer[idx + 3] = 1.0f;                                      // A
+            }
+        }
+    }
+    
+    // Display the test pattern
+    display_->displayTexture(test_buffer, window_width_, window_height_);
+}
+
+} // namespace SplatRender

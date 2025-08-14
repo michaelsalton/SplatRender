@@ -4,6 +4,8 @@
 #include <string>
 #include <chrono>
 
+struct GLFWwindow;
+
 namespace SplatRender {
 
 class Camera;
@@ -33,7 +35,7 @@ private:
     int window_height_;
     std::string window_title_;
     
-    struct GLFWwindow* window_;
+    GLFWwindow* window_;
     
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<InputHandler> input_handler_;
