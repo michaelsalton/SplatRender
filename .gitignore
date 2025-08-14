@@ -213,9 +213,10 @@ doxygen/
 *~
 
 # Core dumps
-core
+/core
 core.*
 vgcore.*
+!src/core/
 
 # Test results
 test_results/
