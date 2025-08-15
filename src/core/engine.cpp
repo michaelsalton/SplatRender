@@ -4,6 +4,7 @@
 #include "renderer/opengl_display.h"
 #include "renderer/cpu_rasterizer.h"
 #include "renderer/text_renderer.h"
+#include "renderer/axis_renderer.h"
 #include "io/ply_loader.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -88,6 +89,12 @@ bool Engine::initialize(int width, int height, const std::string& title) {
     camera_ = std::make_unique<Camera>();
     camera_->setPosition(glm::vec3(0.0f, 0.0f, 5.0f));
     
+    // Print initial camera info
+    glm::vec3 pos = camera_->getPosition();
+    glm::vec3 front = camera_->getFront();
+    std::cout << "Initial camera position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
+    std::cout << "Initial camera front: (" << front.x << ", " << front.y << ", " << front.z << ")" << std::endl;
+    
     // Store pointer to engine for callbacks
     glfwSetWindowUserPointer(window_, this);
     
@@ -107,6 +114,13 @@ bool Engine::initialize(int width, int height, const std::string& title) {
     if (!text_renderer_->initialize(window_width_, window_height_)) {
         std::cerr << "Failed to initialize text renderer" << std::endl;
         // Continue anyway, just won't show FPS
+    }
+    
+    // Initialize axis renderer
+    axis_renderer_ = std::make_unique<AxisRenderer>();
+    if (!axis_renderer_->initialize()) {
+        std::cerr << "Failed to initialize axis renderer" << std::endl;
+        // Continue anyway, just won't show axes
     }
     
     // Set OpenGL state
@@ -275,7 +289,13 @@ void Engine::render() {
         display_->displayTexture(test_buffer, window_width_, window_height_);
     }
     
-    // Draw FPS counter
+    // Draw coordinate axes
+    if (axis_renderer_) {
+        float aspect_ratio = static_cast<float>(window_width_) / static_cast<float>(window_height_);
+        axis_renderer_->render(*camera_, aspect_ratio);
+    }
+    
+    // Draw FPS counter and stats
     if (text_renderer_) {
         std::stringstream fps_text;
         fps_text << "FPS: " << std::fixed << std::setprecision(1) << fps_;
@@ -294,6 +314,13 @@ void Engine::render() {
             stats_text << "Render: " << std::fixed << std::setprecision(2) << stats.total_time_ms << " ms";
             text_renderer_->drawText(stats_text.str(), 10.0f, 55.0f, 1.5f, glm::vec3(0.8f, 1.0f, 0.8f));
         }
+        
+        // Show camera position
+        glm::vec3 pos = camera_->getPosition();
+        std::stringstream pos_text;
+        pos_text << "Pos: (" << std::fixed << std::setprecision(1) 
+                 << pos.x << ", " << pos.y << ", " << pos.z << ")";
+        text_renderer_->drawText(pos_text.str(), 10.0f, 75.0f, 1.5f, glm::vec3(0.8f, 0.8f, 1.0f));
     }
 }
 

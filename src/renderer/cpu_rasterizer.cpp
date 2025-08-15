@@ -181,6 +181,15 @@ bool CPURasterizer::isGaussianVisible(const Gaussian2D& gaussian) const {
 
 void CPURasterizer::rasterizeGaussians(const std::vector<Gaussian2D>& gaussians,
                                       std::vector<float>& output_buffer) {
+    // Initialize output buffer if needed
+    size_t buffer_size = settings_.width * settings_.height * 4;
+    if (output_buffer.size() != buffer_size) {
+        output_buffer.resize(buffer_size);
+    }
+    
+    // Clear buffer to background color
+    std::fill(output_buffer.begin(), output_buffer.end(), 0.0f);
+    
     // Tile-based rendering for better cache performance
     int tiles_x = (settings_.width + settings_.tile_size - 1) / settings_.tile_size;
     int tiles_y = (settings_.height + settings_.tile_size - 1) / settings_.tile_size;

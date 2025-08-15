@@ -75,6 +75,7 @@ set(RENDERER_SOURCES
     src/renderer/cpu_rasterizer.cpp
     src/renderer/opengl_display.cpp
     src/renderer/text_renderer.cpp
+    src/renderer/axis_renderer.cpp
 )
 
 set(ALL_SOURCES

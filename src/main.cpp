@@ -27,14 +27,14 @@ int main(int argc, char** argv) {
         }
         std::cout << "Loaded " << gaussians.size() << " Gaussians" << std::endl;
     } else {
-        // Create a simple test scene
+        // Create a simple test scene with larger, more visible Gaussians
         SplatRender::Gaussian3D g;
         g.position = glm::vec3(0.0f, 0.0f, 0.0f);
-        g.scale = glm::vec3(2.0f, 2.0f, 2.0f);
+        g.scale = glm::vec3(5.0f, 5.0f, 5.0f);  // Much larger scale
         g.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
         g.opacity = 1.0f;
         // Set red color in SH coefficients
-        g.sh_coeffs[0] = 1.0f;   // R channel DC
+        g.sh_coeffs[0] = 3.0f;   // R channel DC (brighter)
         g.sh_coeffs[15] = 0.0f;  // G channel DC
         g.sh_coeffs[30] = 0.0f;  // B channel DC
         gaussians.push_back(g);
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
         // Add a green Gaussian
         g.position = glm::vec3(3.0f, 0.0f, 0.0f);
         g.sh_coeffs[0] = 0.0f;   // R channel DC
-        g.sh_coeffs[15] = 1.0f;  // G channel DC
+        g.sh_coeffs[15] = 3.0f;  // G channel DC (brighter)
         g.sh_coeffs[30] = 0.0f;  // B channel DC
         gaussians.push_back(g);
         
@@ -50,8 +50,13 @@ int main(int argc, char** argv) {
         g.position = glm::vec3(-3.0f, 0.0f, 0.0f);
         g.sh_coeffs[0] = 0.0f;   // R channel DC
         g.sh_coeffs[15] = 0.0f;  // G channel DC
-        g.sh_coeffs[30] = 1.0f;  // B channel DC
+        g.sh_coeffs[30] = 3.0f;  // B channel DC (brighter)
         gaussians.push_back(g);
+        
+        std::cout << "Created test scene with 3 colored Gaussians at:" << std::endl;
+        std::cout << "  Red at (0, 0, 0)" << std::endl;
+        std::cout << "  Green at (3, 0, 0)" << std::endl;
+        std::cout << "  Blue at (-3, 0, 0)" << std::endl;
     }
     
     // Create and initialize engine

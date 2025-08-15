@@ -16,6 +16,7 @@ class OpenGLDisplay;
 class CPURasterizer;
 class PLYLoader;
 class TextRenderer;
+class AxisRenderer;
 
 class Engine {
 public:
@@ -53,6 +54,7 @@ private:
     std::unique_ptr<OpenGLDisplay> display_;
     std::unique_ptr<CPURasterizer> cpu_rasterizer_;
     std::unique_ptr<TextRenderer> text_renderer_;
+    std::unique_ptr<AxisRenderer> axis_renderer_;
     
     std::vector<Gaussian3D> gaussians_;
     std::vector<float> render_buffer_;
