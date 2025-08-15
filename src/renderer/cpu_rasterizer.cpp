@@ -109,8 +109,10 @@ void CPURasterizer::projectGaussians(const std::vector<Gaussian3D>& gaussians_3d
         }
         
         // Convert to screen space
+        // NDC is [-1,1], map to [0,width-1] and [0,height-1]
         float screen_x = (pos_ndc.x * 0.5f + 0.5f) * settings_.width;
-        float screen_y = (1.0f - (pos_ndc.y * 0.5f + 0.5f)) * settings_.height;
+        float screen_y = (0.5f - pos_ndc.y * 0.5f) * settings_.height;
+        
         
         // Compute 2D covariance
         glm::mat3 cov_3d = g3d.computeCovariance3D();
@@ -190,6 +192,7 @@ void CPURasterizer::rasterizeGaussians(const std::vector<Gaussian2D>& gaussians,
     // Clear buffer to background color
     std::fill(output_buffer.begin(), output_buffer.end(), 0.0f);
     
+    
     // Tile-based rendering for better cache performance
     int tiles_x = (settings_.width + settings_.tile_size - 1) / settings_.tile_size;
     int tiles_y = (settings_.height + settings_.tile_size - 1) / settings_.tile_size;
@@ -235,6 +238,39 @@ void CPURasterizer::rasterizeGaussians(const std::vector<Gaussian2D>& gaussians,
     }
     auto sort_end = std::chrono::steady_clock::now();
     stats_.sorting_time_ms = std::chrono::duration<float, std::milli>(sort_end - sort_start).count();
+    
+    // Debug: Draw solid squares at Gaussian centers
+    static bool debug_squares = false;
+    if (debug_squares && !gaussians.empty()) {
+        std::cout << "Drawing " << gaussians.size() << " debug squares" << std::endl;
+        for (size_t i = 0; i < gaussians.size(); ++i) {
+            const auto& g = gaussians[i];
+            // Draw 40x40 pixel square at each Gaussian center
+            int cx = static_cast<int>(g.center.x);
+            int cy = static_cast<int>(g.center.y);
+            std::cout << "Square " << i << " at (" << cx << "," << cy << ") color=(" 
+                      << g.color.r << "," << g.color.g << "," << g.color.b << ")" << std::endl;
+            
+            // Clamp center to ensure square is visible
+            cx = std::max(20, std::min(settings_.width - 20, cx));
+            cy = std::max(20, std::min(settings_.height - 20, cy));
+            
+            for (int dy = -20; dy <= 20; ++dy) {
+                for (int dx = -20; dx <= 20; ++dx) {
+                    int px = cx + dx;
+                    int py = cy + dy;
+                    if (px >= 0 && px < settings_.width && py >= 0 && py < settings_.height) {
+                        int idx = (py * settings_.width + px) * 4;
+                        output_buffer[idx + 0] = g.color.r;
+                        output_buffer[idx + 1] = g.color.g;
+                        output_buffer[idx + 2] = g.color.b;
+                        output_buffer[idx + 3] = 1.0f;
+                    }
+                }
+            }
+        }
+        return; // Skip normal rendering for debugging
+    }
     
     // Rasterize each tile
     for (const auto& tile : tiles) {
