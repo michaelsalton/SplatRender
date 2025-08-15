@@ -110,15 +110,15 @@ void CPURasterizer::projectGaussians(const std::vector<Gaussian3D>& gaussians_3d
         
         // Convert to screen space
         // NDC is [-1,1], map to [0,width-1] and [0,height-1]
-        float screen_x = (pos_ndc.x * 0.5f + 0.5f) * settings_.width;
-        float screen_y = (0.5f - pos_ndc.y * 0.5f) * settings_.height;
+        float screen_x = (pos_ndc.x * 0.5f + 0.5f) * (settings_.width - 1);
+        float screen_y = (0.5f - pos_ndc.y * 0.5f) * (settings_.height - 1);
         
         
         // Compute 2D covariance
         glm::mat3 cov_3d = g3d.computeCovariance3D();
         glm::mat2 cov_2d = GaussianUtils::computeCovariance2D(
             cov_3d,
-            glm::vec3(pos_view),
+            g3d.position,  // Pass world position, not view position!
             view_matrix,
             proj_matrix
         );

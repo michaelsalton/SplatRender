@@ -127,16 +127,16 @@ glm::mat3x2 computeProjectionJacobian(const glm::vec3& pos_view,
     glm::mat3x2 J;
     
     // dx/dx, dy/dx
-    J[0][0] = focal_x / (-z);  // Use -z since camera looks down -Z
+    J[0][0] = -focal_x / z;  // Negative because z is negative in view space
     J[0][1] = 0.0f;
     
     // dx/dy, dy/dy
     J[1][0] = 0.0f;
-    J[1][1] = focal_y / (-z);  // Use -z since camera looks down -Z
+    J[1][1] = -focal_y / z;  // Negative because z is negative in view space
     
     // dx/dz, dy/dz
-    J[2][0] = -focal_x * pos_view.x / z2;
-    J[2][1] = -focal_y * pos_view.y / z2;
+    J[2][0] = focal_x * pos_view.x / z2;
+    J[2][1] = focal_y * pos_view.y / z2;
     
     return J;
 }

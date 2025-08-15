@@ -129,8 +129,8 @@ Gaussian2D projectToScreen(const Gaussian3D& gaussian3d,
     glm::vec3 pos_ndc = glm::vec3(pos_clip) / pos_clip.w;
     
     // Convert to screen space
-    result.center.x = (pos_ndc.x * 0.5f + 0.5f) * screen_width;
-    result.center.y = (1.0f - (pos_ndc.y * 0.5f + 0.5f)) * screen_height;  // Flip Y
+    result.center.x = (pos_ndc.x * 0.5f + 0.5f) * (screen_width - 1);
+    result.center.y = (0.5f - pos_ndc.y * 0.5f) * (screen_height - 1);  // Flip Y
     
     // Store depth for sorting
     result.depth = pos_view.z;
@@ -210,6 +210,11 @@ glm::mat2 computeCovariance2D(const glm::mat3& cov3d,
     
     // Element (1,1): j_col1^T * cov_view * j_col1
     cov2d[1][1] = glm::dot(j_col1, temp1);
+    
+    // Add small epsilon to diagonal for numerical stability
+    float epsilon = 0.3f;
+    cov2d[0][0] += epsilon;
+    cov2d[1][1] += epsilon;
     
     return cov2d;
 }
