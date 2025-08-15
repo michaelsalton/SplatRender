@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
         // Create a simple test scene with larger, more visible Gaussians
         SplatRender::Gaussian3D g;
         g.position = glm::vec3(0.0f, 0.0f, 0.0f);
-        g.scale = glm::vec3(2.0f, 2.0f, 2.0f);  // Medium size
+        g.scale = glm::vec3(1.0f, 1.0f, 1.0f);  // Smaller, perfectly spherical
         g.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
         g.opacity = 1.0f;
         // Set extremely bright white color in SH coefficients
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
         
         // Add a white Gaussian on the right
         g.position = glm::vec3(3.0f, 0.0f, 0.0f);
-        g.scale = glm::vec3(2.0f, 2.0f, 2.0f);  // Medium size
+        g.scale = glm::vec3(1.0f, 1.0f, 1.0f);  // Smaller, perfectly spherical
         g.sh_coeffs[0] = 100.0f;   // R channel DC (extremely bright)
         g.sh_coeffs[15] = 100.0f;  // G channel DC (extremely bright)
         g.sh_coeffs[30] = 100.0f;  // B channel DC (extremely bright)
@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
         
         // Add a white Gaussian on the left
         g.position = glm::vec3(-3.0f, 0.0f, 0.0f);
-        g.scale = glm::vec3(2.0f, 2.0f, 2.0f);  // Medium size
+        g.scale = glm::vec3(1.0f, 1.0f, 1.0f);  // Smaller, perfectly spherical
         g.sh_coeffs[0] = 100.0f;   // R channel DC (extremely bright)
         g.sh_coeffs[15] = 100.0f;  // G channel DC (extremely bright)
         g.sh_coeffs[30] = 100.0f;  // B channel DC (extremely bright)

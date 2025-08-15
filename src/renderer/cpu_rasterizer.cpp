@@ -91,7 +91,7 @@ void CPURasterizer::projectGaussians(const std::vector<Gaussian3D>& gaussians_3d
         glm::vec4 pos_view = view_matrix * glm::vec4(g3d.position, 1.0f);
         
         // Skip if behind camera
-        if (pos_view.z > -0.1f) {
+        if (pos_view.z > -0.001f) {
             stats_.culled_gaussians++;
             continue;
         }
@@ -102,8 +102,8 @@ void CPURasterizer::projectGaussians(const std::vector<Gaussian3D>& gaussians_3d
         // Perspective divide to NDC
         glm::vec3 pos_ndc = glm::vec3(pos_clip) / pos_clip.w;
         
-        // Skip if outside NDC bounds
-        if (std::abs(pos_ndc.x) > 1.5f || std::abs(pos_ndc.y) > 1.5f) {
+        // Skip if outside NDC bounds - use larger threshold to prevent culling
+        if (std::abs(pos_ndc.x) > 3.0f || std::abs(pos_ndc.y) > 3.0f) {
             stats_.culled_gaussians++;
             continue;
         }
@@ -135,8 +135,23 @@ void CPURasterizer::projectGaussians(const std::vector<Gaussian3D>& gaussians_3d
         g2d.color = g3d.evaluateColor(view_dir);
         
         // Compute screen-space radius from covariance
-        Gaussian2D temp = GaussianUtils::projectToScreen(g3d, view_matrix, proj_matrix, settings_.width, settings_.height);
-        g2d.radius = temp.radius;
+        // Eigenvalues of 2x2 covariance matrix
+        float a = cov_2d[0][0];
+        float b = cov_2d[0][1];
+        float c = cov_2d[1][1];
+        
+        float trace = a + c;
+        float det = a * c - b * b;
+        float discriminant = trace * trace - 4.0f * det;
+        
+        if (discriminant >= -1e-6f) {
+            float sqrt_disc = std::sqrt(std::max(0.0f, discriminant));
+            float lambda1 = 0.5f * (trace + sqrt_disc);
+            float lambda2 = 0.5f * (trace - sqrt_disc);
+            g2d.radius = 3.0f * std::sqrt(std::max(lambda1, lambda2));
+        } else {
+            g2d.radius = 0.0f;
+        }
         
         // Skip if too small
         if (g2d.radius < 0.5f) {

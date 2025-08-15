@@ -212,7 +212,7 @@ glm::mat2 computeCovariance2D(const glm::mat3& cov3d,
     cov2d[1][1] = glm::dot(j_col1, temp1);
     
     // Add small epsilon to diagonal for numerical stability
-    float epsilon = 0.3f;
+    float epsilon = 0.1f;
     cov2d[0][0] += epsilon;
     cov2d[1][1] += epsilon;
     

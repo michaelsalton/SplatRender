@@ -13,10 +13,10 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     , yaw_(yaw)
     , pitch_(pitch)
     , front_(0.0f, 0.0f, -1.0f)
-    , movement_speed_(5.0f)
-    , mouse_sensitivity_(0.1f)
+    , movement_speed_(2.0f)
+    , mouse_sensitivity_(0.05f)
     , fov_(60.0f)
-    , near_plane_(0.1f)
+    , near_plane_(0.01f)
     , far_plane_(1000.0f) {
     updateCameraVectors();
 }
