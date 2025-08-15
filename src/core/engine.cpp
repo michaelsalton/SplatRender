@@ -3,6 +3,7 @@
 #include "core/input.h"
 #include "renderer/opengl_display.h"
 #include "renderer/cpu_rasterizer.h"
+#include "renderer/text_renderer.h"
 #include "io/ply_loader.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -100,6 +101,13 @@ bool Engine::initialize(int width, int height, const std::string& title) {
     settings.height = window_height_;
     settings.tile_size = 16;
     cpu_rasterizer_->initialize(settings);
+    
+    // Initialize text renderer
+    text_renderer_ = std::make_unique<TextRenderer>();
+    if (!text_renderer_->initialize(window_width_, window_height_)) {
+        std::cerr << "Failed to initialize text renderer" << std::endl;
+        // Continue anyway, just won't show FPS
+    }
     
     // Set OpenGL state
     glEnable(GL_DEPTH_TEST);
@@ -219,6 +227,11 @@ void Engine::update(float delta_time) {
             // Clear render buffer to force resize
             render_buffer_.clear();
         }
+        
+        // Update text renderer
+        if (text_renderer_) {
+            text_renderer_->updateScreenSize(width, height);
+        }
     }
 }
 
@@ -260,6 +273,27 @@ void Engine::render() {
         
         // Display the test pattern
         display_->displayTexture(test_buffer, window_width_, window_height_);
+    }
+    
+    // Draw FPS counter
+    if (text_renderer_) {
+        std::stringstream fps_text;
+        fps_text << "FPS: " << std::fixed << std::setprecision(1) << fps_;
+        
+        // Draw FPS in top-left corner with a slight offset
+        text_renderer_->drawText(fps_text.str(), 10.0f, 10.0f, 2.0f, glm::vec3(1.0f, 1.0f, 0.0f));
+        
+        // Also show render stats if we have Gaussians
+        if (!gaussians_.empty()) {
+            const auto& stats = cpu_rasterizer_->getStats();
+            std::stringstream stats_text;
+            stats_text << "Gaussians: " << stats.visible_gaussians << "/" << gaussians_.size();
+            text_renderer_->drawText(stats_text.str(), 10.0f, 35.0f, 1.5f, glm::vec3(0.8f, 1.0f, 0.8f));
+            
+            stats_text.str("");
+            stats_text << "Render: " << std::fixed << std::setprecision(2) << stats.total_time_ms << " ms";
+            text_renderer_->drawText(stats_text.str(), 10.0f, 55.0f, 1.5f, glm::vec3(0.8f, 1.0f, 0.8f));
+        }
     }
 }
 
