@@ -2,6 +2,8 @@
 #include "core/camera.h"
 #include "core/input.h"
 #include "renderer/opengl_display.h"
+#include "renderer/cpu_rasterizer.h"
+#include "io/ply_loader.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <sstream>
@@ -90,6 +92,14 @@ bool Engine::initialize(int width, int height, const std::string& title) {
     
     // Initialize input handler
     input_handler_ = std::make_unique<InputHandler>(window_, camera_.get());
+    
+    // Initialize CPU rasterizer
+    cpu_rasterizer_ = std::make_unique<CPURasterizer>();
+    RenderSettings settings;
+    settings.width = window_width_;
+    settings.height = window_height_;
+    settings.tile_size = 16;
+    cpu_rasterizer_->initialize(settings);
     
     // Set OpenGL state
     glEnable(GL_DEPTH_TEST);
@@ -198,33 +208,74 @@ void Engine::update(float delta_time) {
         window_width_ = width;
         window_height_ = height;
         display_->resize(width, height);
+        
+        // Update rasterizer settings
+        if (cpu_rasterizer_) {
+            RenderSettings settings = cpu_rasterizer_->getSettings();
+            settings.width = width;
+            settings.height = height;
+            cpu_rasterizer_->setSettings(settings);
+            
+            // Clear render buffer to force resize
+            render_buffer_.clear();
+        }
     }
 }
 
 void Engine::render() {
-    // For now, just clear the screen with a dark blue color
+    // Clear the screen
     display_->clear(0.1f, 0.1f, 0.2f, 1.0f);
     
-    // TODO: In future phases, we'll render the Gaussian splats here
-    // For now, we can create a test pattern
-    static std::vector<float> test_buffer;
-    if (test_buffer.size() != window_width_ * window_height_ * 4) {
-        test_buffer.resize(window_width_ * window_height_ * 4);
+    if (!gaussians_.empty()) {
+        // Render Gaussians using CPU rasterizer
+        cpu_rasterizer_->render(gaussians_, *camera_, render_buffer_);
         
-        // Create a gradient test pattern
-        for (int y = 0; y < window_height_; ++y) {
-            for (int x = 0; x < window_width_; ++x) {
-                int idx = (y * window_width_ + x) * 4;
-                test_buffer[idx + 0] = static_cast<float>(x) / window_width_;     // R
-                test_buffer[idx + 1] = static_cast<float>(y) / window_height_;    // G
-                test_buffer[idx + 2] = 0.5f;                                      // B
-                test_buffer[idx + 3] = 1.0f;                                      // A
+        // Display rendered image
+        display_->displayTexture(render_buffer_, window_width_, window_height_);
+        
+        // Show stats
+        const auto& stats = cpu_rasterizer_->getStats();
+        if (frame_count_ % 60 == 0) {  // Print every 60 frames
+            std::cout << "Rendered " << stats.visible_gaussians << " Gaussians, "
+                      << "culled " << stats.culled_gaussians << ", "
+                      << "render time: " << stats.total_time_ms << " ms" << std::endl;
+        }
+    } else {
+        // No Gaussians loaded, show a test pattern
+        static std::vector<float> test_buffer;
+        if (test_buffer.size() != window_width_ * window_height_ * 4) {
+            test_buffer.resize(window_width_ * window_height_ * 4);
+            
+            // Create a gradient test pattern
+            for (int y = 0; y < window_height_; ++y) {
+                for (int x = 0; x < window_width_; ++x) {
+                    int idx = (y * window_width_ + x) * 4;
+                    test_buffer[idx + 0] = static_cast<float>(x) / window_width_;     // R
+                    test_buffer[idx + 1] = static_cast<float>(y) / window_height_;    // G
+                    test_buffer[idx + 2] = 0.5f;                                      // B
+                    test_buffer[idx + 3] = 1.0f;                                      // A
+                }
             }
         }
+        
+        // Display the test pattern
+        display_->displayTexture(test_buffer, window_width_, window_height_);
+    }
+}
+
+bool Engine::loadPLY(const std::string& filename) {
+    PLYLoader loader;
+    std::vector<Gaussian3D> temp_gaussians;
+    
+    if (!loader.load(filename, temp_gaussians)) {
+        std::cerr << "Failed to load PLY file: " << loader.getLastError() << std::endl;
+        return false;
     }
     
-    // Display the test pattern
-    display_->displayTexture(test_buffer, window_width_, window_height_);
+    gaussians_ = std::move(temp_gaussians);
+    std::cout << "Loaded " << gaussians_.size() << " Gaussians from " << filename << std::endl;
+    
+    return true;
 }
 
 } // namespace SplatRender

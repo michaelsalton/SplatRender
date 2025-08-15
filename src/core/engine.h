@@ -27,6 +27,9 @@ public:
     
     // Load PLY file
     bool loadPLY(const std::string& filename);
+    
+    // Set Gaussians directly
+    void setGaussians(const std::vector<Gaussian3D>& gaussians) { gaussians_ = gaussians; }
 
     Camera* getCamera() { return camera_.get(); }
     InputHandler* getInputHandler() { return input_handler_.get(); }
@@ -47,6 +50,10 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<InputHandler> input_handler_;
     std::unique_ptr<OpenGLDisplay> display_;
+    std::unique_ptr<CPURasterizer> cpu_rasterizer_;
+    
+    std::vector<Gaussian3D> gaussians_;
+    std::vector<float> render_buffer_;
     
     std::chrono::steady_clock::time_point last_frame_time_;
     float fps_;
