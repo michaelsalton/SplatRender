@@ -208,14 +208,11 @@ void test_ply_loader_progress_callback() {
 }
 
 void test_ply_loader_sh_coefficients() {
-    std::cout << "Starting test_ply_loader_sh_coefficients..." << std::endl;
-    
     const std::string test_file = "test_sh.ply";
     
     // Create file with SH coefficients
     std::ofstream file(test_file);
     if (!file.is_open()) {
-        std::cout << "Failed to create test file" << std::endl;
         ASSERT_TRUE(false);
         return;
     }
@@ -254,8 +251,6 @@ void test_ply_loader_sh_coefficients() {
     file << "\n";
     file.close();
     
-    std::cout << "Created test file, now loading..." << std::endl;
-    
     PLYLoader loader;
     std::vector<Gaussian3D> gaussians;
     
@@ -274,8 +269,6 @@ void test_ply_loader_sh_coefficients() {
     for (int i = 0; i < 9 && (3 + i) < 45; ++i) {
         ASSERT_NEAR(g.sh_coeffs[3 + i], 0.4f + i * 0.1f, 1e-6f);
     }
-    
-    std::cout << "Test completed successfully" << std::endl;
     
     // Clean up
     std::remove(test_file.c_str());
@@ -316,8 +309,8 @@ int main() {
     RUN_TEST(test_ply_loader_invalid_file);
     RUN_TEST(test_ply_loader_invalid_format);
     RUN_TEST(test_ply_loader_progress_callback);
-    // RUN_TEST(test_ply_loader_sh_coefficients);  // Temporarily disabled - causes crash
-    // RUN_TEST(test_ply_real_file);  // Temporarily disabled
+    RUN_TEST(test_ply_loader_sh_coefficients);
+    // RUN_TEST(test_ply_real_file);  // Requires test data file
     
     TestFramework::getInstance().printSummary();
     

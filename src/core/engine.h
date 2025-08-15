@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 #include <chrono>
+#include <vector>
+#include "math/gaussian.h"
 
 struct GLFWwindow;
 
@@ -11,6 +13,8 @@ namespace SplatRender {
 class Camera;
 class InputHandler;
 class OpenGLDisplay;
+class CPURasterizer;
+class PLYLoader;
 
 class Engine {
 public:
@@ -20,6 +24,9 @@ public:
     bool initialize(int width, int height, const std::string& title);
     void run();
     void shutdown();
+    
+    // Load PLY file
+    bool loadPLY(const std::string& filename);
 
     Camera* getCamera() { return camera_.get(); }
     InputHandler* getInputHandler() { return input_handler_.get(); }

@@ -103,11 +103,8 @@ bool PLYLoader::parseHeader(std::ifstream& file, PLYHeader& header) {
         header.bytes_per_vertex = property_index * sizeof(float);
     }
     
-    // Initialize f_rest_indices if needed
-    if (header.f_rest_indices.empty()) {
-        // Pre-allocate for 45 SH coefficients (15 per channel, 3 channels)
-        header.f_rest_indices.resize(45, -1);
-    }
+    // f_rest_indices will be populated dynamically based on the actual properties in the file
+    // No need to pre-allocate here
     
     return true;
 }
@@ -154,7 +151,11 @@ bool PLYLoader::parseProperties(const std::string& line, PLYHeader& header, int&
     } else if (name.find("f_rest_") == 0) {
         // Parse SH coefficient index
         int sh_idx = std::stoi(name.substr(7));
-        if (sh_idx >= 0 && sh_idx < 45) {
+        // Ensure the vector is large enough
+        if (sh_idx >= 0) {
+            if (static_cast<size_t>(sh_idx) >= header.f_rest_indices.size()) {
+                header.f_rest_indices.resize(sh_idx + 1, -1);
+            }
             header.f_rest_indices[sh_idx] = property_index;
         }
     }
@@ -303,12 +304,13 @@ Gaussian3D PLYLoader::parseVertex(const std::vector<float>& vertex_data, const P
     }
     
     // Extract remaining SH coefficients
+    // f_rest_indices should only contain indices for actual f_rest properties in the file
+    // We need to map f_rest_0 through f_rest_N to sh_coeffs[3] through sh_coeffs[3+N]
     for (size_t i = 0; i < header.f_rest_indices.size(); ++i) {
         int idx = header.f_rest_indices[i];
         if (idx >= 0 && static_cast<size_t>(idx) < vertex_data.size()) {
-            // f_rest starts at SH index 3 (after DC terms)
-            // Make sure we don't exceed the sh_coeffs array bounds
-            size_t sh_idx = i + 3;
+            // f_rest_i maps to sh_coeffs[3 + i]
+            size_t sh_idx = 3 + i;
             if (sh_idx < gaussian.sh_coeffs.size()) {
                 gaussian.sh_coeffs[sh_idx] = vertex_data[idx];
             }
