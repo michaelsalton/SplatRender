@@ -44,6 +44,12 @@ void CPURasterizer::render(const std::vector<Gaussian3D>& gaussians,
     // Reset stats
     stats_ = Stats();
     
+    // Debug: Log input
+    static int debug_frame = 0;
+    if (debug_frame++ % 60 == 0) {
+        std::cout << "Rendering " << gaussians.size() << " input Gaussians" << std::endl;
+    }
+    
     // Stage 1: Project Gaussians to screen space
     auto stage_start = std::chrono::steady_clock::now();
     projected_gaussians_.clear();
@@ -61,6 +67,16 @@ void CPURasterizer::render(const std::vector<Gaussian3D>& gaussians,
     
     stats_.visible_gaussians = projected_gaussians_.size();
     stats_.culled_gaussians = gaussians.size() - projected_gaussians_.size();
+    
+    // Debug output
+    if (debug_frame % 60 == 1) {
+        std::cout << "After projection: " << projected_gaussians_.size() << " visible, " 
+                  << stats_.culled_gaussians << " culled" << std::endl;
+        if (projected_gaussians_.size() > 0) {
+            std::cout << "First Gaussian screen pos: (" << projected_gaussians_[0].center.x 
+                      << ", " << projected_gaussians_[0].center.y << ")" << std::endl;
+        }
+    }
     
     // Stage 3: Rasterize Gaussians
     stage_start = std::chrono::steady_clock::now();
@@ -85,6 +101,7 @@ void CPURasterizer::projectGaussians(const std::vector<Gaussian3D>& gaussians_3d
     // Get camera position for view-dependent effects
     glm::vec3 camera_pos = camera.getPosition();
     
+    
     // Project each Gaussian
     for (const auto& g3d : gaussians_3d) {
         // Transform to view space
@@ -108,10 +125,10 @@ void CPURasterizer::projectGaussians(const std::vector<Gaussian3D>& gaussians_3d
             continue;
         }
         
-        // Convert to screen space
-        // NDC is [-1,1], map to [0,width-1] and [0,height-1]
-        float screen_x = (pos_ndc.x * 0.5f + 0.5f) * (settings_.width - 1);
-        float screen_y = (0.5f - pos_ndc.y * 0.5f) * (settings_.height - 1);
+        // Convert to screen space using standard OpenGL viewport transformation
+        // NDC is [-1,1], map to [0,width] and [0,height]
+        float screen_x = (pos_ndc.x + 1.0f) * 0.5f * settings_.width;
+        float screen_y = (pos_ndc.y + 1.0f) * 0.5f * settings_.height;
         
         
         // Compute 2D covariance
@@ -275,7 +292,9 @@ void CPURasterizer::rasterizeGaussians(const std::vector<Gaussian2D>& gaussians,
                     int px = cx + dx;
                     int py = cy + dy;
                     if (px >= 0 && px < settings_.width && py >= 0 && py < settings_.height) {
-                        int idx = (py * settings_.width + px) * 4;
+                        // Flip Y coordinate for buffer access
+                        int buffer_y = settings_.height - 1 - py;
+                        int idx = (buffer_y * settings_.width + px) * 4;
                         output_buffer[idx + 0] = g.color.r;
                         output_buffer[idx + 1] = g.color.g;
                         output_buffer[idx + 2] = g.color.b;
@@ -297,7 +316,9 @@ void CPURasterizer::rasterizeGaussians(const std::vector<Gaussian2D>& gaussians,
         // Process each pixel in the tile
         for (int py = tile_start_y; py < tile_end_y; ++py) {
             for (int px = tile_start_x; px < tile_end_x; ++px) {
-                int pixel_idx = py * settings_.width + px;
+                // Flip Y coordinate for buffer access (OpenGL has origin at bottom-left)
+                int buffer_y = settings_.height - 1 - py;
+                int pixel_idx = buffer_y * settings_.width + px;
                 
                 // Initialize pixel
                 glm::vec3 color(0.0f);
@@ -340,6 +361,32 @@ void CPURasterizer::rasterizeGaussians(const std::vector<Gaussian2D>& gaussians,
                 output_buffer[pixel_idx * 4 + 2] = color.b;
                 output_buffer[pixel_idx * 4 + 3] = alpha;
                 
+            }
+        }
+    }
+    
+    // Debug: Draw Gaussian centers as small dots AFTER main rendering
+    static bool debug_centers = false;  // Disabled - enable when needed
+    if (debug_centers) {
+        for (const auto& gaussian : gaussians) {
+            int cx = static_cast<int>(gaussian.center.x);
+            int cy = static_cast<int>(gaussian.center.y);
+            
+            // Draw 5x5 pixel dot at center (bigger for visibility)
+            for (int dy = -2; dy <= 2; ++dy) {
+                for (int dx = -2; dx <= 2; ++dx) {
+                    int px = cx + dx;
+                    int py = cy + dy;
+                    if (px >= 0 && px < settings_.width && py >= 0 && py < settings_.height) {
+                        // Flip Y coordinate for buffer access
+                        int buffer_y = settings_.height - 1 - py;
+                        int idx = (buffer_y * settings_.width + px) * 4;
+                        output_buffer[idx + 0] = 1.0f;  // Red center dot
+                        output_buffer[idx + 1] = 0.0f;
+                        output_buffer[idx + 2] = 0.0f;
+                        output_buffer[idx + 3] = 1.0f;
+                    }
+                }
             }
         }
     }

@@ -100,9 +100,13 @@ void Camera::updateCameraVectors() {
     new_front.z = sin(glm::radians(yaw_)) * cos(glm::radians(pitch_));
     front_ = glm::normalize(new_front);
     
-    // Recalculate right and up vectors
+    // Force world-aligned up vector to prevent drift
+    // First calculate the right vector using world up
     right_ = glm::normalize(glm::cross(front_, world_up_));
-    up_ = glm::normalize(glm::cross(right_, front_));
+    
+    // Then use world up directly as the up vector
+    // This ensures the camera's up vector is always aligned with world Y
+    up_ = world_up_;
 }
 
 void Camera::saveState(const std::string& filename) const {

@@ -72,9 +72,10 @@ float Gaussian2D::computeAlpha(const glm::vec2& pixel_pos) const {
     // Compute inverse of covariance matrix
     float det = cov_2d[0][0] * cov_2d[1][1] - cov_2d[0][1] * cov_2d[1][0];
     
-    // If determinant is too small, Gaussian is degenerate
-    if (std::abs(det) < 1e-6f) {
-        return 0.0f;
+    // Add small epsilon to prevent division by zero
+    const float epsilon = 1e-4f;
+    if (std::abs(det) < epsilon) {
+        det = (det >= 0) ? epsilon : -epsilon;
     }
     
     glm::mat2 inv_cov;
@@ -128,9 +129,9 @@ Gaussian2D projectToScreen(const Gaussian3D& gaussian3d,
     // Perspective division to NDC
     glm::vec3 pos_ndc = glm::vec3(pos_clip) / pos_clip.w;
     
-    // Convert to screen space
-    result.center.x = (pos_ndc.x * 0.5f + 0.5f) * (screen_width - 1);
-    result.center.y = (0.5f - pos_ndc.y * 0.5f) * (screen_height - 1);  // Flip Y
+    // Convert to screen space using standard OpenGL viewport transformation
+    result.center.x = (pos_ndc.x + 1.0f) * 0.5f * screen_width;
+    result.center.y = (pos_ndc.y + 1.0f) * 0.5f * screen_height;
     
     // Store depth for sorting
     result.depth = pos_view.z;
@@ -210,11 +211,6 @@ glm::mat2 computeCovariance2D(const glm::mat3& cov3d,
     
     // Element (1,1): j_col1^T * cov_view * j_col1
     cov2d[1][1] = glm::dot(j_col1, temp1);
-    
-    // Add small epsilon to diagonal for numerical stability
-    float epsilon = 0.1f;
-    cov2d[0][0] += epsilon;
-    cov2d[1][1] += epsilon;
     
     return cov2d;
 }
