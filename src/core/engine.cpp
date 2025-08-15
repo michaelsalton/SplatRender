@@ -250,8 +250,8 @@ void Engine::update(float delta_time) {
 }
 
 void Engine::render() {
-    // Clear the screen
-    display_->clear(0.1f, 0.1f, 0.2f, 1.0f);
+    // Clear the screen to black for better contrast
+    display_->clear(0.0f, 0.0f, 0.0f, 1.0f);
     
     if (!gaussians_.empty()) {
         // Render Gaussians using CPU rasterizer
@@ -289,10 +289,20 @@ void Engine::render() {
         display_->displayTexture(test_buffer, window_width_, window_height_);
     }
     
-    // Draw coordinate axes
+    // Draw coordinate axes (after texture display to avoid being overwritten)
     if (axis_renderer_) {
+        // Save and restore OpenGL state
+        GLint old_program;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &old_program);
+        GLint old_vao;
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &old_vao);
+        
         float aspect_ratio = static_cast<float>(window_width_) / static_cast<float>(window_height_);
         axis_renderer_->render(*camera_, aspect_ratio);
+        
+        // Restore state
+        glUseProgram(old_program);
+        glBindVertexArray(old_vao);
     }
     
     // Draw FPS counter and stats

@@ -7,7 +7,7 @@
 namespace SplatRender {
 
 const char* axis_vertex_shader = R"(
-#version 410 core
+#version 330 core
 layout (location = 0) in vec3 position;
 
 uniform mat4 mvp;
@@ -18,7 +18,7 @@ void main() {
 )";
 
 const char* axis_fragment_shader = R"(
-#version 410 core
+#version 330 core
 out vec4 FragColor;
 
 uniform vec3 color;
@@ -39,6 +39,8 @@ AxisRenderer::~AxisRenderer() {
 }
 
 bool AxisRenderer::initialize() {
+    std::cout << "AxisRenderer::initialize called" << std::endl;
+    
     // Initialize GLEW if needed
     glewExperimental = GL_TRUE;
     GLenum err = glewInit();
@@ -46,9 +48,14 @@ bool AxisRenderer::initialize() {
         // Already initialized, continue
     }
     
-    createShaders();
+    if (!createShaders()) {
+        std::cerr << "Failed to create axis shaders" << std::endl;
+        return false;
+    }
+    
     createGeometry();
     
+    std::cout << "AxisRenderer initialized successfully" << std::endl;
     return true;
 }
 
@@ -60,7 +67,7 @@ void AxisRenderer::shutdown() {
     vao_ = vbo_ = shader_program_ = 0;
 }
 
-void AxisRenderer::createShaders() {
+bool AxisRenderer::createShaders() {
     // Create vertex shader
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &axis_vertex_shader, NULL);
@@ -109,21 +116,35 @@ void AxisRenderer::createShaders() {
     // Get uniform locations
     mvp_loc_ = glGetUniformLocation(shader_program_, "mvp");
     color_loc_ = glGetUniformLocation(shader_program_, "color");
+    
+    std::cout << "MVP uniform location: " << mvp_loc_ << std::endl;
+    std::cout << "Color uniform location: " << color_loc_ << std::endl;
+    
+    if (mvp_loc_ == -1 || color_loc_ == -1) {
+        std::cerr << "Failed to get uniform locations!" << std::endl;
+        return false;
+    }
+    
+    return true;
 }
 
 void AxisRenderer::createGeometry() {
-    // Create axis lines: 6 vertices (2 per axis)
-    // Each axis goes from -10 to +10 units
+    // Create axis lines and a test triangle
     float vertices[] = {
+        // Test triangle in view (should be visible)
+        -1.0f, -1.0f, -2.0f,
+         1.0f, -1.0f, -2.0f,
+         0.0f,  1.0f, -2.0f,
+        
         // X axis (red)
-        -10.0f, 0.0f, 0.0f,
-         10.0f, 0.0f, 0.0f,
+        -5.0f, 0.0f, 0.0f,
+         5.0f, 0.0f, 0.0f,
         // Y axis (green)
-        0.0f, -10.0f, 0.0f,
-        0.0f,  10.0f, 0.0f,
+        0.0f, -5.0f, 0.0f,
+        0.0f,  5.0f, 0.0f,
         // Z axis (blue)
-        0.0f, 0.0f, -10.0f,
-        0.0f, 0.0f,  10.0f,
+        0.0f, 0.0f, -5.0f,
+        0.0f, 0.0f,  5.0f,
     };
     
     glGenVertexArrays(1, &vao_);
@@ -153,10 +174,12 @@ void AxisRenderer::render(const Camera& camera, float aspect_ratio) {
     GLint old_line_width;
     glGetIntegerv(GL_LINE_WIDTH, &old_line_width);
     GLboolean old_depth_test = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean old_blend = glIsEnabled(GL_BLEND);
     
     // Set up state for axis rendering
-    glEnable(GL_DEPTH_TEST);
-    glLineWidth(3.0f);
+    glDisable(GL_DEPTH_TEST);  // Disable depth test so axes are always visible
+    glDisable(GL_BLEND);  // Disable blending
+    glLineWidth(10.0f);  // Make lines very thick
     
     // Use shader program
     glUseProgram(shader_program_);
@@ -171,18 +194,24 @@ void AxisRenderer::render(const Camera& camera, float aspect_ratio) {
     // Bind VAO
     glBindVertexArray(vao_);
     
+    // Draw test triangle first (bright yellow)
+    glUniform3f(color_loc_, 1.0f, 1.0f, 0.0f);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    
     // Draw X axis (red)
     glUniform3f(color_loc_, 1.0f, 0.0f, 0.0f);
-    glDrawArrays(GL_LINES, 0, 2);
+    glDrawArrays(GL_LINES, 3, 2);
     
     // Draw Y axis (green)
     glUniform3f(color_loc_, 0.0f, 1.0f, 0.0f);
-    glDrawArrays(GL_LINES, 2, 2);
+    glDrawArrays(GL_LINES, 5, 2);
     
     // Draw Z axis (blue)
     glUniform3f(color_loc_, 0.0f, 0.0f, 1.0f);
-    glDrawArrays(GL_LINES, 4, 2);
+    glDrawArrays(GL_LINES, 7, 2);
     
+    // Skip marker drawing for now
+    if (false) {
     // Draw small markers every unit along each axis
     glLineWidth(1.0f);
     
@@ -222,12 +251,14 @@ void AxisRenderer::render(const Camera& camera, float aspect_ratio) {
     }
     glBufferSubData(GL_ARRAY_BUFFER, 0, idx * sizeof(float), markers);
     glDrawArrays(GL_LINES, 0, idx/3);
+    }
     
     // Restore state
     glBindVertexArray(0);
     glUseProgram(0);
     glLineWidth(old_line_width);
-    if (!old_depth_test) glDisable(GL_DEPTH_TEST);
+    if (old_depth_test) glEnable(GL_DEPTH_TEST);
+    if (old_blend) glEnable(GL_BLEND);
 }
 
 } // namespace SplatRender

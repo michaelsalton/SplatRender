@@ -26,7 +26,7 @@ private:
     GLint mvp_loc_;
     GLint color_loc_;
     
-    void createShaders();
+    bool createShaders();
     void createGeometry();
 };
 

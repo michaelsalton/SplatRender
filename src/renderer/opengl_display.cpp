@@ -217,9 +217,20 @@ void OpenGLDisplay::displayTexture(const std::vector<float>& buffer, int width, 
         return;
     }
     
+    // Clear any existing GL errors
+    while (glGetError() != GL_NO_ERROR) {}
+    
     // Update texture if dimensions changed
     if (width != width_ || height != height_) {
         resize(width, height);
+    }
+    
+    // Check buffer size
+    size_t expected_size = width * height * 4;
+    if (buffer.size() != expected_size) {
+        std::cerr << "OpenGLDisplay: Buffer size mismatch. Expected " << expected_size 
+                  << " but got " << buffer.size() << std::endl;
+        return;
     }
     
     // Upload buffer to texture
@@ -227,7 +238,7 @@ void OpenGLDisplay::displayTexture(const std::vector<float>& buffer, int width, 
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT, buffer.data());
     
     // Clear screen
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     // Use shader program
     glUseProgram(shader_program_);
@@ -271,7 +282,7 @@ void OpenGLDisplay::displayCudaTexture(GLuint cuda_texture) {
 
 void OpenGLDisplay::clear(float r, float g, float b, float a) {
     glClearColor(r, g, b, a);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void OpenGLDisplay::resize(int width, int height) {
