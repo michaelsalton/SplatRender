@@ -6,6 +6,7 @@
 #include <glm/gtx/norm.hpp>
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
 namespace SplatRender {
 
@@ -55,7 +56,10 @@ glm::mat3 Gaussian3D::computeCovariance3D() const {
 glm::vec3 Gaussian3D::evaluateColor(const glm::vec3& view_direction) const {
     // Use spherical harmonics to compute view-dependent color
     // Default to degree 2 (9 coefficients per channel)
-    return SphericalHarmonics::evaluateColorFromSH(sh_coeffs, view_direction, 2);
+    glm::vec3 color = SphericalHarmonics::evaluateColorFromSH(sh_coeffs, view_direction, 2);
+    
+    
+    return color;
 }
 
 // Gaussian2D implementation

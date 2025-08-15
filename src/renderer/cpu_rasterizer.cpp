@@ -288,6 +288,7 @@ void CPURasterizer::rasterizeGaussians(const std::vector<Gaussian2D>& gaussians,
                 output_buffer[pixel_idx * 4 + 1] = color.g;
                 output_buffer[pixel_idx * 4 + 2] = color.b;
                 output_buffer[pixel_idx * 4 + 3] = alpha;
+                
             }
         }
     }

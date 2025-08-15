@@ -39,8 +39,6 @@ AxisRenderer::~AxisRenderer() {
 }
 
 bool AxisRenderer::initialize() {
-    std::cout << "AxisRenderer::initialize called" << std::endl;
-    
     // Initialize GLEW if needed
     glewExperimental = GL_TRUE;
     GLenum err = glewInit();
@@ -55,7 +53,6 @@ bool AxisRenderer::initialize() {
     
     createGeometry();
     
-    std::cout << "AxisRenderer initialized successfully" << std::endl;
     return true;
 }
 
@@ -117,9 +114,6 @@ bool AxisRenderer::createShaders() {
     mvp_loc_ = glGetUniformLocation(shader_program_, "mvp");
     color_loc_ = glGetUniformLocation(shader_program_, "color");
     
-    std::cout << "MVP uniform location: " << mvp_loc_ << std::endl;
-    std::cout << "Color uniform location: " << color_loc_ << std::endl;
-    
     if (mvp_loc_ == -1 || color_loc_ == -1) {
         std::cerr << "Failed to get uniform locations!" << std::endl;
         return false;
@@ -129,13 +123,8 @@ bool AxisRenderer::createShaders() {
 }
 
 void AxisRenderer::createGeometry() {
-    // Create axis lines and a test triangle
+    // Create axis lines
     float vertices[] = {
-        // Test triangle in view (should be visible)
-        -1.0f, -1.0f, -2.0f,
-         1.0f, -1.0f, -2.0f,
-         0.0f,  1.0f, -2.0f,
-        
         // X axis (red)
         -5.0f, 0.0f, 0.0f,
          5.0f, 0.0f, 0.0f,
@@ -194,21 +183,17 @@ void AxisRenderer::render(const Camera& camera, float aspect_ratio) {
     // Bind VAO
     glBindVertexArray(vao_);
     
-    // Draw test triangle first (bright yellow)
-    glUniform3f(color_loc_, 1.0f, 1.0f, 0.0f);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    
     // Draw X axis (red)
     glUniform3f(color_loc_, 1.0f, 0.0f, 0.0f);
-    glDrawArrays(GL_LINES, 3, 2);
+    glDrawArrays(GL_LINES, 0, 2);
     
     // Draw Y axis (green)
     glUniform3f(color_loc_, 0.0f, 1.0f, 0.0f);
-    glDrawArrays(GL_LINES, 5, 2);
+    glDrawArrays(GL_LINES, 2, 2);
     
     // Draw Z axis (blue)
     glUniform3f(color_loc_, 0.0f, 0.0f, 1.0f);
-    glDrawArrays(GL_LINES, 7, 2);
+    glDrawArrays(GL_LINES, 4, 2);
     
     // Skip marker drawing for now
     if (false) {
