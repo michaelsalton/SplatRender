@@ -3,7 +3,7 @@
 *Last Updated: August 24, 2025*
 
 ## Project Status Overview
-- **Current Phase**: Ready for Phase 8 (CUDA Kernel Implementation)
+- **Current Phase**: Phase 9 (Optimization) - IN PROGRESS
 - **Previous Phases**: 
   - Foundation & Setup ✅ COMPLETE
   - Mathematical Foundation ✅ COMPLETE (All 37 tests passing)
@@ -12,7 +12,8 @@
   - File I/O & Data Loading ✅ COMPLETE (All 6 tests passing)
   - CPU Reference Renderer ✅ COMPLETE (All 8 tests passing)
   - CUDA Memory Management ✅ COMPLETE (CUDA initialized, memory management working)
-- **Next Milestone**: CUDA Kernel Implementation (Phase 8) - Linux Only
+  - CUDA Kernel Implementation ✅ COMPLETE (All 4 kernels implemented)
+- **Next Milestone**: Complete optimization and performance tuning
 - **Target Completion**: 10 weeks from project start
 - **Total Tests Passing**: 88/88 + CUDA tests passing
 - **Platform**: Linux with NVIDIA RTX 2070 (8GB VRAM, Compute Capability 7.5)
@@ -429,20 +430,23 @@
 - **Platform Migration**: Successfully moved from macOS to Linux development
 - **CUDA Support**: Full CUDA 12.0 integration with RTX 2070
 - **Memory Infrastructure**: Complete GPU memory management system
-- **88 Tests Passing**: All CPU implementation tests successful
+- **CUDA Kernels**: All 4 kernels implemented (Phase 8 ✅)
+- **Optimization Started**: Phase 9 in progress with profiling and constant memory
+- **88+ Tests Passing**: All CPU implementation tests successful
 - **Build System**: CMake fully configured for CUDA compilation
 
 ### 📊 Performance Metrics
 - **CPU Baseline**: 3-5ms per frame with 70 Gaussians
 - **GPU Ready**: 8GB VRAM available, Compute Capability 7.5
 - **Memory Verified**: Allocation, transfers, and pools working
+- **Kernel Profiling**: Infrastructure in place for performance monitoring
 
-### 🚀 Next Steps (Phase 8)
-1. **Projection Kernel**: Transform Gaussians from 3D to screen space
-2. **Tiling Kernel**: Assign Gaussians to 16x16 pixel tiles
-3. **Sorting Kernel**: Per-tile depth sorting for correct blending
-4. **Rasterization Kernel**: GPU-accelerated rendering
-5. **Performance Target**: 60+ FPS with 100K+ Gaussians
+### 🚀 Current Work (Phase 9 - Optimization)
+1. ✅ **Kernel Profiling Infrastructure**: Complete timing and memory tracking
+2. ✅ **Constant Memory**: Matrices and parameters optimized
+3. ✅ **Shared Memory**: Projection kernel optimized
+4. ✅ **Early Culling**: Frustum, opacity, and size culling implemented
+5. ⏳ **Next**: Tile size experiments, occupancy tuning, mixed precision
 
 ### 📁 Project Structure
 ```
@@ -451,12 +455,20 @@ src/
 ├── math/          ✅ Complete (Gaussian, Matrix, SH)
 ├── io/            ✅ Complete (PLY Loader)
 ├── renderer/      ✅ Complete (CPU Rasterizer, OpenGL)
-└── cuda/          ✅ Infrastructure ready
+└── cuda/          ✅ Phase 8 complete, Phase 9 in progress
     ├── cuda_utils.h           ✅ Error checking, helpers
     ├── cuda_manager.cu        ✅ Device management
     ├── cuda_memory.cu         ✅ Memory operations
     ├── cuda_gl_interop.cu     ✅ OpenGL interop
-    └── cuda_rasterizer.cu     ⏳ Kernels pending (Phase 8)
+    ├── cuda_rasterizer.cu     ✅ Integration complete
+    ├── kernel_profiler.cu     ✅ NEW: Performance profiling
+    ├── cuda_constants_opt.cu  ✅ NEW: Optimized constants
+    └── kernels/
+        ├── projection.cu      ✅ Basic implementation
+        ├── projection_opt.cu  ✅ NEW: Optimized version
+        ├── tiling.cu         ✅ Basic implementation
+        ├── sorting.cu        ✅ Basic implementation
+        └── rasterization.cu  ✅ Basic implementation
 ```
 
 ### 🛠️ Build & Run Commands
