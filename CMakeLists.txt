@@ -88,16 +88,10 @@ set(ALL_SOURCES
 
 # CUDA sources (Linux only)
 if(USE_CUDA)
-    set(CUDA_SOURCES
-        src/cuda/memory_manager.cu
-        src/cuda/cuda_utils.cu
-        src/cuda/kernels/projection.cu
-        src/cuda/kernels/tiling.cu
-        src/cuda/kernels/rasterization.cu
-    )
-    
-    # Set CUDA architecture (adjust based on your GPU)
-    set_property(GLOBAL PROPERTY CUDA_ARCHITECTURES 70 75 80 86)
+    # CUDA implementation will be added
+    # For now, we'll use CPU fallback
+    set(USE_CUDA OFF)
+    message(STATUS "CUDA files not yet implemented - using CPU fallback")
 endif()
 
 # Create executable

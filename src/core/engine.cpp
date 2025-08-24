@@ -77,7 +77,6 @@ bool Engine::initialize(int width, int height, const std::string& title) {
     // Enable V-Sync
     glfwSwapInterval(1);
     
-    
     // Initialize OpenGL display
     display_ = std::make_unique<OpenGLDisplay>();
     if (!display_->initialize(window_width_, window_height_)) {

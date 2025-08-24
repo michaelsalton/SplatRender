@@ -107,8 +107,8 @@ void CPURasterizer::projectGaussians(const std::vector<Gaussian3D>& gaussians_3d
         // Transform to view space
         glm::vec4 pos_view = view_matrix * glm::vec4(g3d.position, 1.0f);
         
-        // Skip if behind camera
-        if (pos_view.z > -0.001f) {
+        // Skip if behind camera (in view space, objects in front have negative z)
+        if (pos_view.z > 0.001f) {
             stats_.culled_gaussians++;
             continue;
         }
