@@ -3,6 +3,7 @@
 #include "cuda_manager.h"
 #include "cuda_constants.h"
 #include "kernels/kernels.h"
+#include "kernel_profiler.h"
 #include "../core/camera.h"
 #include <iostream>
 #include <algorithm>
@@ -112,32 +113,60 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
     // Get CUDA stream
     cudaStream_t stream = CudaManager::getInstance().getDefaultStream();
     
-    // ========================================================================
-    // Step 1: Upload Gaussians to GPU
-    // ========================================================================
-    timer_->start();
-    
-    // Allocate pinned memory for conversion
-    PinnedMemory<GaussianData3D> h_gaussians_3d(gaussians.size());
-    convertGaussians(gaussians, h_gaussians_3d.getHostPtr());
-    
-    // Upload to device
+    // Declare variables that need to persist across scopes
     CudaMemory<GaussianData3D> d_gaussians_3d_data(gaussians.size());
-    d_gaussians_3d_data.copyFromHostAsync(h_gaussians_3d.getHostPtr(), gaussians.size(), stream);
+    CudaMemory<GaussianData2D> d_gaussians_2d_data(gaussians.size());
+    CudaMemory<int> d_visible_count(1);
+    int h_visible_count;
     
-    timer_->stop();
-    stats_.upload_time_ms = timer_->getElapsedMs();
-    
-    // ========================================================================
-    // Step 2: Projection Kernel
-    // ========================================================================
-    timer_->start();
-    
-    // Create camera parameters
+    // Get render params
     float aspect_ratio = static_cast<float>(settings_.width) / static_cast<float>(settings_.height);
     glm::mat4 view_matrix = camera.getViewMatrix();
     glm::mat4 proj_matrix = camera.getProjectionMatrix(aspect_ratio);
     glm::vec3 cam_pos = camera.getPosition();
+    
+    RenderParams render_params = createRenderParams(
+        settings_.width,
+        settings_.height,
+        gaussians.size()
+    );
+    int total_tiles = render_params.total_tiles;
+    
+    // Tile buffers
+    CudaMemory<int> d_tile_lists(total_tiles * MAX_GAUSSIANS_PER_TILE);
+    CudaMemory<int> d_tile_counts(total_tiles);
+    CudaMemory<float> d_tile_depths(total_tiles * MAX_GAUSSIANS_PER_TILE);
+    CudaMemory<int> d_tile_offsets(total_tiles);
+    CudaMemory<int> d_tile_lists_compact(gaussians.size() * 4);  // Will be resized after projection
+    CudaMemory<float> d_tile_depths_compact(gaussians.size() * 4);
+    CudaMemory<float4> d_output_image(settings_.width * settings_.height);
+    
+    // ========================================================================
+    // Step 1: Upload Gaussians to GPU
+    // ========================================================================
+    {
+        splat::KernelProfiler::ScopedTimer upload_timer("Upload");
+        
+        // Allocate pinned memory for conversion
+        PinnedMemory<GaussianData3D> h_gaussians_3d(gaussians.size());
+        convertGaussians(gaussians, h_gaussians_3d.getHostPtr());
+        
+        // Upload to device
+        d_gaussians_3d_data.copyFromHostAsync(h_gaussians_3d.getHostPtr(), gaussians.size(), stream);
+        
+        // Record memory allocation
+        splat::MemoryProfiler::getInstance().recordAllocation("gaussians_3d", 
+            d_gaussians_3d_data.allocatedBytes());
+    }
+    stats_.upload_time_ms = splat::KernelProfiler::getInstance().getLastTime("Upload");
+    
+    // ========================================================================
+    // Step 2: Projection Kernel
+    // ========================================================================
+    {  
+        splat::KernelProfiler::ScopedTimer proj_timer("Projection");
+    
+    // Create camera parameters
     float cam_pos_array[3] = {cam_pos.x, cam_pos.y, cam_pos.z};
     
     CameraParams camera_params = createCameraParams(
@@ -149,16 +178,6 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
         settings_.width,
         settings_.height
     );
-    
-    RenderParams render_params = createRenderParams(
-        settings_.width,
-        settings_.height,
-        gaussians.size()
-    );
-    
-    // Allocate buffers for 2D Gaussians
-    CudaMemory<GaussianData2D> d_gaussians_2d_data(gaussians.size());
-    CudaMemory<int> d_visible_count(1);
     
     // Launch projection kernel
     launchProjectionKernel(
@@ -172,25 +191,17 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
     );
     
     // Get visible count
-    int h_visible_count;
     d_visible_count.copyToHost(&h_visible_count, 1);
     stats_.visible_gaussians = h_visible_count;
     
-    timer_->stop();
-    stats_.projection_time_ms = timer_->getElapsedMs();
+    }
+    stats_.projection_time_ms = splat::KernelProfiler::getInstance().getLastTime("Projection");
     
     // ========================================================================
     // Step 3: Tiling Kernel
     // ========================================================================
-    timer_->start();
-    
-    int total_tiles = render_params.total_tiles;
-    
-    // Allocate tile buffers
-    CudaMemory<int> d_tile_lists(total_tiles * MAX_GAUSSIANS_PER_TILE);
-    CudaMemory<int> d_tile_counts(total_tiles);
-    CudaMemory<float> d_tile_depths(total_tiles * MAX_GAUSSIANS_PER_TILE);
-    CudaMemory<int> d_tile_offsets(total_tiles);
+    {
+        splat::KernelProfiler::ScopedTimer tiling_timer("Tiling");
     
     // Launch tiling kernel
     launchTilingKernel(
@@ -204,8 +215,6 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
     );
     
     // Compact tile lists
-    CudaMemory<int> d_tile_lists_compact(h_visible_count * 4);  // Worst case
-    CudaMemory<float> d_tile_depths_compact(h_visible_count * 4);
     
     launchCompactionKernel(
         d_tile_lists.getDevicePtr(),
@@ -218,13 +227,14 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
         stream
     );
     
-    timer_->stop();
-    float tiling_time = timer_->getElapsedMs();
+    }
+    float tiling_time = splat::KernelProfiler::getInstance().getLastTime("Tiling");
     
     // ========================================================================
     // Step 4: Sorting Kernel
     // ========================================================================
-    timer_->start();
+    {
+        splat::KernelProfiler::ScopedTimer sorting_timer("Sorting");
     
     launchSortingKernel(
         d_tile_lists_compact.getDevicePtr(),
@@ -235,16 +245,14 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
         stream
     );
     
-    timer_->stop();
-    stats_.sorting_time_ms = timer_->getElapsedMs() + tiling_time;
+    }
+    stats_.sorting_time_ms = splat::KernelProfiler::getInstance().getLastTime("Sorting") + tiling_time;
     
     // ========================================================================
     // Step 5: Rasterization Kernel
     // ========================================================================
-    timer_->start();
-    
-    // Allocate output image
-    CudaMemory<float4> d_output_image(settings_.width * settings_.height);
+    {
+        splat::KernelProfiler::ScopedTimer raster_timer("Rasterization");
     
     // Clear image
     launchClearImageKernel(
@@ -267,13 +275,14 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
         false  // Use tile-based version
     );
     
-    timer_->stop();
-    stats_.rasterization_time_ms = timer_->getElapsedMs();
+    }
+    stats_.rasterization_time_ms = splat::KernelProfiler::getInstance().getLastTime("Rasterization");
     
     // ========================================================================
     // Step 6: Download result to CPU
     // ========================================================================
-    timer_->start();
+    {
+        splat::KernelProfiler::ScopedTimer download_timer("Download");
     
     // Synchronize to ensure kernels are complete
     cudaStreamSynchronize(stream);
@@ -286,8 +295,8 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
     d_output_image.copyToHost(reinterpret_cast<float4*>(output_buffer.data()), 
                               settings_.width * settings_.height);
     
-    timer_->stop();
-    stats_.download_time_ms = timer_->getElapsedMs();
+    }
+    stats_.download_time_ms = splat::KernelProfiler::getInstance().getLastTime("Download");
     
     // Update total time
     stats_.total_time_ms = stats_.upload_time_ms + stats_.projection_time_ms + 
@@ -300,6 +309,22 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
                                d_output_image.allocatedBytes() +
                                d_tile_lists.allocatedBytes() +
                                d_tile_counts.allocatedBytes();
+    
+    // Update performance monitor
+    auto& perf_monitor = splat::PerformanceMonitor::getInstance();
+    perf_monitor.updateGaussianStats(stats_.visible_gaussians, 
+                                     gaussians.size() - stats_.visible_gaussians);
+    
+    // Update frame stats for profiler
+    splat::KernelProfiler::FrameStats frame_stats;
+    frame_stats.projection_ms = stats_.projection_time_ms;
+    frame_stats.tiling_ms = tiling_time;
+    frame_stats.sorting_ms = stats_.sorting_time_ms - tiling_time;
+    frame_stats.rasterization_ms = stats_.rasterization_time_ms;
+    frame_stats.total_ms = stats_.total_time_ms;
+    frame_stats.rendered_gaussians = stats_.visible_gaussians;
+    frame_stats.culled_gaussians = gaussians.size() - stats_.visible_gaussians;
+    splat::KernelProfiler::getInstance().updateFrameStats(frame_stats);
 }
 
 void CudaRasterizer::renderDirect(const Gaussian3D* d_gaussians, 

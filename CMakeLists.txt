@@ -94,7 +94,10 @@ if(USE_CUDA)
         src/cuda/cuda_gl_interop.cu
         src/cuda/cuda_rasterizer.cu
         src/cuda/cuda_rasterizer_wrapper.cpp
+        src/cuda/kernel_profiler.cu
+        src/cuda/cuda_constants_opt.cu
         src/cuda/kernels/projection.cu
+        src/cuda/kernels/projection_opt.cu
         src/cuda/kernels/tiling.cu
         src/cuda/kernels/sorting.cu
         src/cuda/kernels/rasterization.cu
