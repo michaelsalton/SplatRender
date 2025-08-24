@@ -93,6 +93,11 @@ if(USE_CUDA)
         src/cuda/cuda_memory.cu
         src/cuda/cuda_gl_interop.cu
         src/cuda/cuda_rasterizer.cu
+        src/cuda/cuda_rasterizer_wrapper.cpp
+        src/cuda/kernels/projection.cu
+        src/cuda/kernels/tiling.cu
+        src/cuda/kernels/sorting.cu
+        src/cuda/kernels/rasterization.cu
     )
     
     # Set CUDA architecture for RTX 2070 (compute capability 7.5)

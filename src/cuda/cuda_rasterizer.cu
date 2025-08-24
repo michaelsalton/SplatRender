@@ -1,28 +1,36 @@
 #include "cuda_rasterizer.h"
+#include "cuda_rasterizer_wrapper.h"
 #include "cuda_manager.h"
+#include "cuda_constants.h"
+#include "kernels/kernels.h"
 #include "../core/camera.h"
 #include <iostream>
 #include <algorithm>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace SplatRender {
 namespace CUDA {
 
-// Placeholder kernels - will be implemented in Phase 8
-__global__ void projectGaussiansKernel(const Gaussian3D* gaussians_3d,
-                                       Gaussian2D* gaussians_2d,
-                                       int* visible_indices,
-                                       int count,
-                                       const float* view_matrix,
-                                       const float* proj_matrix,
-                                       int width, int height) {
-    // TODO: Implement in Phase 8
-}
-
-__global__ void rasterizeKernel(const Gaussian2D* gaussians_2d,
-                                float* output_buffer,
-                                int count,
-                                int width, int height) {
-    // TODO: Implement in Phase 8
+// Helper function to convert Gaussian3D to GaussianData3D
+void convertGaussians(const std::vector<Gaussian3D>& gaussians, GaussianData3D* output) {
+    for (size_t i = 0; i < gaussians.size(); i++) {
+        const Gaussian3D& src = gaussians[i];
+        GaussianData3D& dst = output[i];
+        
+        dst.position = make_float3(src.position.x, src.position.y, src.position.z);
+        dst.opacity = src.opacity;
+        dst.scale = make_float3(src.scale.x, src.scale.y, src.scale.z);
+        dst.rotation = make_float4(src.rotation.x, src.rotation.y, src.rotation.z, src.rotation.w);
+        
+        // Copy spherical harmonics coefficients
+        for (int j = 0; j < 45; j++) {
+            dst.sh_coeffs[j] = src.sh_coeffs[j];
+        }
+        // Zero out unused coefficients
+        for (int j = 45; j < 48; j++) {
+            dst.sh_coeffs[j] = 0.0f;
+        }
+    }
 }
 
 CudaRasterizer::CudaRasterizer() 
@@ -98,26 +106,186 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
         return;
     }
     
+    // Ensure buffers are large enough
+    ensureBufferSizes(gaussians.size());
+    
+    // Get CUDA stream
+    cudaStream_t stream = CudaManager::getInstance().getDefaultStream();
+    
+    // ========================================================================
+    // Step 1: Upload Gaussians to GPU
+    // ========================================================================
     timer_->start();
     
-    // Upload Gaussians to GPU
-    uploadGaussians(gaussians);
+    // Allocate pinned memory for conversion
+    PinnedMemory<GaussianData3D> h_gaussians_3d(gaussians.size());
+    convertGaussians(gaussians, h_gaussians_3d.getHostPtr());
+    
+    // Upload to device
+    CudaMemory<GaussianData3D> d_gaussians_3d_data(gaussians.size());
+    d_gaussians_3d_data.copyFromHostAsync(h_gaussians_3d.getHostPtr(), gaussians.size(), stream);
+    
     timer_->stop();
     stats_.upload_time_ms = timer_->getElapsedMs();
     
-    // Clear output buffer on GPU
-    size_t output_size = settings_.width * settings_.height * 4;
-    d_output_buffer_.clear();
-    
-    // TODO: Launch projection kernel (Phase 8)
-    // For now, just clear the output
-    
-    // TODO: Launch rasterization kernel (Phase 8)
-    
-    // Download result to CPU
+    // ========================================================================
+    // Step 2: Projection Kernel
+    // ========================================================================
     timer_->start();
+    
+    // Create camera parameters
+    float aspect_ratio = static_cast<float>(settings_.width) / static_cast<float>(settings_.height);
+    glm::mat4 view_matrix = camera.getViewMatrix();
+    glm::mat4 proj_matrix = camera.getProjectionMatrix(aspect_ratio);
+    glm::vec3 cam_pos = camera.getPosition();
+    float cam_pos_array[3] = {cam_pos.x, cam_pos.y, cam_pos.z};
+    
+    CameraParams camera_params = createCameraParams(
+        glm::value_ptr(view_matrix),
+        glm::value_ptr(proj_matrix),
+        cam_pos_array,
+        camera.getFOV() * M_PI / 180.0f,  // Convert to radians
+        camera.getFOV() * settings_.height / settings_.width * M_PI / 180.0f,
+        settings_.width,
+        settings_.height
+    );
+    
+    RenderParams render_params = createRenderParams(
+        settings_.width,
+        settings_.height,
+        gaussians.size()
+    );
+    
+    // Allocate buffers for 2D Gaussians
+    CudaMemory<GaussianData2D> d_gaussians_2d_data(gaussians.size());
+    CudaMemory<int> d_visible_count(1);
+    
+    // Launch projection kernel
+    launchProjectionKernel(
+        d_gaussians_3d_data.getDevicePtr(),
+        d_gaussians_2d_data.getDevicePtr(),
+        d_visible_count.getDevicePtr(),
+        camera_params,
+        render_params,
+        gaussians.size(),
+        stream
+    );
+    
+    // Get visible count
+    int h_visible_count;
+    d_visible_count.copyToHost(&h_visible_count, 1);
+    stats_.visible_gaussians = h_visible_count;
+    
+    timer_->stop();
+    stats_.projection_time_ms = timer_->getElapsedMs();
+    
+    // ========================================================================
+    // Step 3: Tiling Kernel
+    // ========================================================================
+    timer_->start();
+    
+    int total_tiles = render_params.total_tiles;
+    
+    // Allocate tile buffers
+    CudaMemory<int> d_tile_lists(total_tiles * MAX_GAUSSIANS_PER_TILE);
+    CudaMemory<int> d_tile_counts(total_tiles);
+    CudaMemory<float> d_tile_depths(total_tiles * MAX_GAUSSIANS_PER_TILE);
+    CudaMemory<int> d_tile_offsets(total_tiles);
+    
+    // Launch tiling kernel
+    launchTilingKernel(
+        d_gaussians_2d_data.getDevicePtr(),
+        d_tile_lists.getDevicePtr(),
+        d_tile_counts.getDevicePtr(),
+        d_tile_depths.getDevicePtr(),
+        h_visible_count,
+        render_params,
+        stream
+    );
+    
+    // Compact tile lists
+    CudaMemory<int> d_tile_lists_compact(h_visible_count * 4);  // Worst case
+    CudaMemory<float> d_tile_depths_compact(h_visible_count * 4);
+    
+    launchCompactionKernel(
+        d_tile_lists.getDevicePtr(),
+        d_tile_depths.getDevicePtr(),
+        d_tile_lists_compact.getDevicePtr(),
+        d_tile_depths_compact.getDevicePtr(),
+        d_tile_offsets.getDevicePtr(),
+        d_tile_counts.getDevicePtr(),
+        total_tiles,
+        stream
+    );
+    
+    timer_->stop();
+    float tiling_time = timer_->getElapsedMs();
+    
+    // ========================================================================
+    // Step 4: Sorting Kernel
+    // ========================================================================
+    timer_->start();
+    
+    launchSortingKernel(
+        d_tile_lists_compact.getDevicePtr(),
+        d_tile_depths_compact.getDevicePtr(),
+        d_tile_counts.getDevicePtr(),
+        d_tile_offsets.getDevicePtr(),
+        total_tiles,
+        stream
+    );
+    
+    timer_->stop();
+    stats_.sorting_time_ms = timer_->getElapsedMs() + tiling_time;
+    
+    // ========================================================================
+    // Step 5: Rasterization Kernel
+    // ========================================================================
+    timer_->start();
+    
+    // Allocate output image
+    CudaMemory<float4> d_output_image(settings_.width * settings_.height);
+    
+    // Clear image
+    launchClearImageKernel(
+        d_output_image.getDevicePtr(),
+        settings_.width,
+        settings_.height,
+        make_float4(0.0f, 0.0f, 0.0f, 0.0f),
+        stream
+    );
+    
+    // Launch rasterization kernel
+    launchRasterizationKernel(
+        d_gaussians_2d_data.getDevicePtr(),
+        d_tile_lists_compact.getDevicePtr(),
+        d_tile_counts.getDevicePtr(),
+        d_tile_offsets.getDevicePtr(),
+        d_output_image.getDevicePtr(),
+        render_params,
+        stream,
+        false  // Use tile-based version
+    );
+    
+    timer_->stop();
+    stats_.rasterization_time_ms = timer_->getElapsedMs();
+    
+    // ========================================================================
+    // Step 6: Download result to CPU
+    // ========================================================================
+    timer_->start();
+    
+    // Synchronize to ensure kernels are complete
+    cudaStreamSynchronize(stream);
+    
+    // Resize output buffer
+    size_t output_size = settings_.width * settings_.height * 4;
     output_buffer.resize(output_size);
-    d_output_buffer_.copyToHost(output_buffer.data(), output_size);
+    
+    // Copy from device (float4) to host (float array)
+    d_output_image.copyToHost(reinterpret_cast<float4*>(output_buffer.data()), 
+                              settings_.width * settings_.height);
+    
     timer_->stop();
     stats_.download_time_ms = timer_->getElapsedMs();
     
@@ -127,10 +295,11 @@ void CudaRasterizer::render(const std::vector<Gaussian3D>& gaussians,
                            stats_.download_time_ms;
     
     // Update memory usage
-    stats_.memory_used_bytes = d_gaussians_3d_.allocatedBytes() + 
-                               d_gaussians_2d_.allocatedBytes() +
-                               d_output_buffer_.allocatedBytes() +
-                               d_depth_buffer_.allocatedBytes();
+    stats_.memory_used_bytes = d_gaussians_3d_data.allocatedBytes() + 
+                               d_gaussians_2d_data.allocatedBytes() +
+                               d_output_image.allocatedBytes() +
+                               d_tile_lists.allocatedBytes() +
+                               d_tile_counts.allocatedBytes();
 }
 
 void CudaRasterizer::renderDirect(const Gaussian3D* d_gaussians, 
@@ -242,9 +411,14 @@ int CudaRasterizer::getTileCount() const {
 // Factory function
 std::unique_ptr<CPURasterizer> createRasterizer(bool prefer_cuda) {
     if (prefer_cuda && isCudaAvailable()) {
-        // For now, return CPU rasterizer until CUDA kernels are implemented
-        // In Phase 8, this will return a wrapper that uses CudaRasterizer
-        std::cout << "CUDA available but kernels not yet implemented, using CPU rasterizer" << std::endl;
+        try {
+            auto wrapper = std::make_unique<CudaRasterizerWrapper>();
+            std::cout << "Using CUDA-accelerated rasterizer" << std::endl;
+            return wrapper;
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to create CUDA rasterizer: " << e.what() << std::endl;
+            std::cerr << "Falling back to CPU rasterizer" << std::endl;
+        }
     }
     return std::make_unique<CPURasterizer>();
 }

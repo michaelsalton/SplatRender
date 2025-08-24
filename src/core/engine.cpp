@@ -6,6 +6,9 @@
 #include "renderer/text_renderer.h"
 #include "renderer/axis_renderer.h"
 #include "io/ply_loader.h"
+#ifdef USE_CUDA
+#include "cuda/cuda_rasterizer.h"
+#endif
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <sstream>
@@ -100,8 +103,12 @@ bool Engine::initialize(int width, int height, const std::string& title) {
     // Initialize input handler
     input_handler_ = std::make_unique<InputHandler>(window_, camera_.get());
     
-    // Initialize CPU rasterizer
+    // Initialize rasterizer (CUDA if available, otherwise CPU)
+#ifdef USE_CUDA
+    cpu_rasterizer_ = CUDA::createRasterizer(true);
+#else
     cpu_rasterizer_ = std::make_unique<CPURasterizer>();
+#endif
     RenderSettings settings;
     settings.width = window_width_;
     settings.height = window_height_;
