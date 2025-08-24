@@ -88,10 +88,18 @@ set(ALL_SOURCES
 
 # CUDA sources (Linux only)
 if(USE_CUDA)
-    # CUDA implementation will be added
-    # For now, we'll use CPU fallback
-    set(USE_CUDA OFF)
-    message(STATUS "CUDA files not yet implemented - using CPU fallback")
+    set(CUDA_SOURCES
+        src/cuda/cuda_manager.cu
+        src/cuda/cuda_memory.cu
+        src/cuda/cuda_gl_interop.cu
+        src/cuda/cuda_rasterizer.cu
+    )
+    
+    # Set CUDA architecture for RTX 2070 (compute capability 7.5)
+    set(CMAKE_CUDA_ARCHITECTURES 75)
+    
+    message(STATUS "CUDA support enabled - building with GPU acceleration")
+    message(STATUS "CUDA sources: ${CUDA_SOURCES}")
 endif()
 
 # Create executable
@@ -120,6 +128,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${OPENGL_INCLUDE_DIRS}
 )
+
+# CUDA include directories
+if(USE_CUDA)
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CUDAToolkit_INCLUDE_DIRS}
+    )
+endif()
 
 # Eigen include
 target_include_directories(${PROJECT_NAME} PRIVATE ${EIGEN3_INCLUDE_DIR})
@@ -177,6 +192,40 @@ if(BUILD_TESTS)
     # Only add tests subdirectory if it has a CMakeLists.txt
     if(EXISTS ${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt)
         add_subdirectory(tests)
+    endif()
+    
+    # CUDA test executable (Linux only)
+    if(USE_CUDA)
+        add_executable(cuda_test 
+            src/cuda_test.cpp 
+            ${CUDA_SOURCES}
+            ${RENDERER_SOURCES}  # Add CPU renderer for factory function
+            ${MATH_SOURCES}      # Add math sources for Gaussian operations
+            ${CORE_SOURCES}      # Add core sources for Camera
+            ${IO_SOURCES}        # Add IO sources for PLYLoader
+        )
+        target_include_directories(cuda_test PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CUDAToolkit_INCLUDE_DIRS}
+            ${GLM_INCLUDE_DIR}
+            ${EIGEN3_INCLUDE_DIR}
+        )
+        target_link_libraries(cuda_test PRIVATE
+            CUDA::cudart
+            CUDA::cuda_driver
+            GLEW::GLEW
+            ${OPENGL_LIBRARIES}
+            glfw
+            GL
+            X11
+            pthread
+            dl
+        )
+        target_compile_definitions(cuda_test PRIVATE USE_CUDA)
+        set_target_properties(cuda_test PROPERTIES
+            CUDA_SEPARABLE_COMPILATION ON
+            CUDA_RESOLVE_DEVICE_SYMBOLS ON
+        )
     endif()
 endif()
 
